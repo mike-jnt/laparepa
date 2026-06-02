@@ -1100,7 +1100,7 @@
 
 
 
-  <main id="menuDigitalVista" data-role="gestion-only" class="p-4 md:p-6 hidden">
+  <main id="menuDigitalVista" class="p-4 md:p-6 hidden">
     <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
       <div>
         <h2 class="text-2xl font-black text-gray-800">🖼️ Menú digital</h2>
@@ -1109,7 +1109,7 @@
       <button type="button" onclick="cerrarEditorCatalogo()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-xl font-semibold">← Volver al sistema</button>
     </div>
     <!-- Pantalla Menú digital / Catálogo cliente -->
-    <section id="seccionEditorCatalogo" data-role="gestion-only" class="bg-white rounded-3xl shadow-xl border border-yellow-100 overflow-hidden">
+    <section id="seccionEditorCatalogo" class="bg-white rounded-3xl shadow-xl border border-yellow-100 overflow-hidden">
       <div class="bg-gradient-to-br from-yellow-50 via-white to-orange-50 px-4 sm:px-6 py-5 border-b border-yellow-100">
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div>
@@ -4709,6 +4709,16 @@ function aplicarPermisosPorRol() {
   });
 
   document.querySelectorAll('[data-role="gestion-only"]').forEach(el => {
+    const vistaControlada = ['menuDigitalVista', 'historicosVista', 'domiciliosVista', 'resumenProductos'].includes(el.id);
+    if (vistaControlada) {
+      if (!tieneAccesoGestion()) {
+        el.classList.add('hidden');
+        el.style.display = 'none';
+      } else {
+        el.style.display = '';
+      }
+      return;
+    }
     el.classList.toggle('hidden', !tieneAccesoGestion());
     el.style.display = tieneAccesoGestion() ? '' : 'none';
   });
@@ -5501,7 +5511,16 @@ function cancelarPedidoActual() {
   }
 
   function scrollToPedidosCatalogo() {
-    try { mostrarSeccionPrincipal && mostrarSeccionPrincipal('appMain'); } catch (_) {}
+    try {
+      if (typeof ocultarVistasPrincipalesLaParepa === 'function') ocultarVistasPrincipalesLaParepa();
+      const appMain = document.getElementById('appMain');
+      if (appMain) appMain.classList.remove('hidden');
+      ['menuDigitalVista', 'historicosVista', 'cajaVista', 'domiciliosVista', 'dashboardPremium', 'cocinaVistaPremium'].forEach(id => {
+        const vista = document.getElementById(id);
+        if (vista) vista.classList.add('hidden');
+      });
+      if (typeof irAPasoVenta === 'function') irAPasoVenta(1);
+    } catch (_) {}
     const el = document.getElementById('pedidosCatalogoSeccion');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
