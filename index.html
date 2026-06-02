@@ -582,6 +582,10 @@
     }
   }
 </style>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 
 <body class="bg-yellow-50 font-sans">
@@ -685,7 +689,7 @@
           📆 Inventario
         </button>
         <button type="button" onclick="abrirEditorCatalogo()" data-role="gestion-only" class="bg-white text-yellow-700 font-semibold px-3 py-2 rounded-lg shadow hover:bg-yellow-100 transition text-center">
-          🍽️ Editar menú
+          🖼️ Menú digital
         </button>
         <button type="button" onclick="cerrarSesionRol()" class="bg-white/20 text-white font-semibold px-3 py-2 rounded-lg shadow hover:bg-white/30 transition text-center border border-white/40">
           🔒 Cerrar sesión
@@ -701,12 +705,12 @@
             <p class="mt-1 font-bold text-gray-800 truncate"><span id="usuarioActualTexto">Sin usuario</span></p>
             <p class="text-sm text-yellow-700 font-semibold"><span id="rolActualTexto">Sin rol</span></p>
             <div class="mt-4">
-              <p class="text-xs uppercase tracking-wide text-gray-500">Modo local</p>
+              <p class="text-xs uppercase tracking-wide text-gray-500">Base de datos</p>
               <div class="mt-2 flex items-center gap-3">
                 <span id="firebaseStatusDot" class="inline-flex w-3 h-3 rounded-full bg-green-500"></span>
                 <div>
-                  <p id="firebaseStatusText" class="font-bold text-green-600">Independiente</p>
-                  <p id="firebaseStatusSubtext" class="text-xs text-gray-500">Datos guardados en este dispositivo</p>
+                  <p id="firebaseStatusText" class="font-bold text-green-600">Conectando</p>
+                  <p id="firebaseStatusSubtext" class="text-xs text-gray-500">Preparando conexión</p>
                 </div>
               </div>
             </div>
@@ -724,7 +728,9 @@
           <button type="button" onclick="abrirHistoricos(); cerrarMobileMenu();" data-role="gestion-only" class="menu-link-text admin">📈 Históricos</button>
           <button type="button" onclick="abrirDomiciliosVista(); cerrarMobileMenu();" data-role="gestion-only" class="menu-link-text admin">🛵 Domicilios</button>
           <button type="button" onclick="cerrarMobileMenu(); mostrarModuloIndependiente('Inventario');" data-role="gestion-only" class="menu-link-text admin">📆 Inventario</button>
-          <button type="button" onclick="cerrarMobileMenu(); abrirEditorCatalogo();" data-role="gestion-only" class="menu-link-text admin">🍽️ Editar menú</button>
+          <button type="button" onclick="cerrarMobileMenu(); abrirEditorCatalogo();" data-role="gestion-only" class="menu-link-text admin">🖼️ Menú digital</button>
+          <button type="button" onclick="scrollToPedidosCatalogo(); cerrarMobileMenu();" class="menu-link-text">📲 Pedidos catálogo</button>
+          <button type="button" onclick="abrirGeneradorQRMesas(); cerrarMobileMenu();" data-role="gestion-only" class="menu-link-text admin">🔳 QR mesas</button>
           <button type="button" onclick="exportarVentasExcelConEstilo(); cerrarMobileMenu();" id="btnExportarExcelMobile" data-role="gestion-only" class="menu-link-text admin">📊 Exportar ventas a Excel</button>
           <button type="button" onclick="borrarVentas(); cerrarMobileMenu();" data-role="gestion-only" class="menu-link-text admin">🗑️ Borrar ventas</button>
           <button type="button" onclick="generarResumenProductos(); cerrarMobileMenu();" data-role="gestion-only" class="menu-link-text admin">📦 Ver resumen productos</button>
@@ -908,8 +914,7 @@
         <div class="space-y-2">
           <select id="formaPago" class="w-full p-3 border border-yellow-300 rounded-xl text-base">
             <option value="">Seleccione forma de pago</option>
-            <option value="QR Señor arepa">QR Señor arepa</option>
-            <option value="QR Señora arepa">QR Señora arepa</option>
+            <option value="QR">QR La Parepa</option>
             <option value="Bre-B">Bre-B</option>
             <option value="daviplata">daviplata</option>
             <option value="nequi">nequi</option>
@@ -989,6 +994,23 @@
         <button onclick="generarResumenProductos()" data-role="gestion-only" class="hidden md:inline-flex bg-indigo-500 hover:bg-indigo-600 text-white p-3 rounded-xl font-semibold">📊 Ver Resumen Productos</button>
       </div>
     </section>
+
+
+
+    <!-- Pedidos recibidos desde catálogo digital -->
+    <div id="pedidosCatalogoSeccion" class="mt-8 bg-white p-4 rounded-xl shadow-md border border-yellow-100">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-800">📲 Pedidos recibidos del catálogo</h3>
+          <p id="pedidosCatalogoEstado" class="text-sm text-gray-500 mt-1">Conecta el catálogo para recibir pedidos de mesa en tiempo real.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" onclick="refrescarPedidosCatalogoManual()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm font-semibold">Actualizar</button>
+          <button type="button" onclick="abrirGeneradorQRMesas()" data-role="gestion-only" class="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-xl text-sm font-semibold">Generar QR mesas</button>
+        </div>
+      </div>
+      <div id="pedidosCatalogoLista" class="grid grid-cols-1 lg:grid-cols-2 gap-3"></div>
+    </div>
 
     <!-- Visualización de Ventas Guardadas -->
     <div id="ventasSeccion" class="mt-8 bg-white p-4 rounded-xl shadow-md">
@@ -1579,9 +1601,9 @@
     <div class="w-full max-w-6xl max-h-[92vh] overflow-hidden rounded-2xl bg-white shadow-2xl border border-yellow-100 flex flex-col">
       <div class="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-yellow-100 bg-yellow-50">
         <div>
-          <p class="text-xs uppercase tracking-wide text-yellow-700 font-bold">Gestión de productos</p>
-          <h3 class="text-lg sm:text-xl font-black text-gray-800">Editar menú, adiciones y bebidas</h3>
-          <p class="text-xs sm:text-sm text-gray-500">Cambia nombres y precios, o crea productos nuevos y sincronízalos en todos los equipos.</p>
+          <p class="text-xs uppercase tracking-wide text-yellow-700 font-bold">Gestión del menú digital</p>
+          <h3 class="text-lg sm:text-xl font-black text-gray-800">Productos, imágenes y precios del catálogo</h3>
+          <p class="text-xs sm:text-sm text-gray-500">Toma los productos ya creados en Nueva venta, permite ajustar precios, cargar imagen y publicarlo en Firestore para el menú del cliente.</p>
           <p id="estadoCatalogoSync" class="mt-2 inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-semibold border border-blue-100">Catálogo cargado en modo local</p>
         </div>
         <button type="button" onclick="cerrarEditorCatalogo()" class="w-10 h-10 rounded-full bg-white border border-yellow-200 text-gray-600 hover:bg-yellow-100 text-xl leading-none">×</button>
@@ -1598,7 +1620,40 @@
 
       <div class="px-4 sm:px-6 py-4 border-t border-yellow-100 bg-white flex flex-col sm:flex-row gap-2 sm:justify-end">
         <button type="button" onclick="cerrarEditorCatalogo()" class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold">Cancelar</button>
-        <button type="button" onclick="guardarCatalogoDesdeEditor()" class="px-4 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-white font-semibold">Guardar cambios del catálogo</button>
+        <button type="button" onclick="guardarCatalogoDesdeEditor()" class="px-4 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-white font-semibold">Guardar y publicar menú digital</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Modal generador QR mesas -->
+  <div id="modalQRMesas" class="fixed inset-0 bg-black/50 z-[90] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="px-5 py-4 border-b border-yellow-100 flex items-center justify-between gap-3">
+        <div>
+          <h3 class="text-xl font-bold text-gray-800">🔳 Generador de QR para mesas</h3>
+          <p class="text-sm text-gray-500">Cada QR abre el catálogo con el número de mesa incluido.</p>
+        </div>
+        <button type="button" onclick="cerrarGeneradorQRMesas()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl font-bold">✕</button>
+      </div>
+      <div class="p-5 overflow-auto space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="md:col-span-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">URL pública del catálogo</label>
+            <input id="qrCatalogoBaseUrl" type="url" placeholder="https://tudominio.com/catalogo.html" class="w-full border border-yellow-300 rounded-xl p-3" />
+            <p class="text-xs text-gray-500 mt-1">Sube el archivo del catálogo a tu dominio y pega aquí esa URL.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Cantidad de mesas</label>
+            <input id="qrCantidadMesas" type="number" min="1" max="100" value="20" class="w-full border border-yellow-300 rounded-xl p-3" />
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" onclick="generarQRMesas()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-xl font-semibold">Generar QR</button>
+          <button type="button" onclick="window.print()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold">Imprimir</button>
+        </div>
+        <div id="qrMesasResultado" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
       </div>
     </div>
   </div>
@@ -1692,6 +1747,10 @@ let catalogoProductos = { comida: [], adiciones: [], bebidas: [] };
 let catalogoBaseProductos = null;
 let ultimoProductoEditorCreado = null;
 let contadorProductoCatalogo = 0;
+const PEDIDOS_CATALOGO_COLLECTION = 'pedidosCatalogo';
+let pedidosCatalogoUnsubscribe = null;
+let pedidosCatalogoCache = [];
+let pedidoCatalogoActualId = null;
 
 function obtenerRefCatalogoFirestore() {
   if (!firestoreDisponible || !firestoreDb) return null;
@@ -1718,12 +1777,24 @@ function actualizarEstadoCatalogoSync(mensaje = 'Catálogo cargado en modo local
 
 function prepararPayloadCatalogoFirestore() {
   const limpio = normalizarCatalogoProductos(catalogoProductos);
+  const mapProductoCatalogo = (item, categoriaId) => ({
+    id: item.id,
+    nombre: String(item.nombre || '').trim(),
+    precio: Number(item.precio || 0),
+    icono: item.icono || DEFINICIONES_CATALOGO[categoriaId].iconoDefecto,
+    imgData: obtenerImagenProductoCatalogo(item),
+    imageUrl: String(item.imageUrl || item.urlImagen || '').trim(),
+    descripcion: String(item.descripcion || '').trim(),
+    activo: item.activo !== false,
+    actualizadoEn: item.actualizadoEn || new Date().toISOString()
+  });
   return {
-    comida: (limpio.comida || []).map(item => ({ id: item.id, nombre: String(item.nombre || '').trim(), precio: Number(item.precio || 0), icono: item.icono || DEFINICIONES_CATALOGO.comida.iconoDefecto })),
-    adiciones: (limpio.adiciones || []).map(item => ({ id: item.id, nombre: String(item.nombre || '').trim(), precio: Number(item.precio || 0), icono: item.icono || DEFINICIONES_CATALOGO.adiciones.iconoDefecto })),
-    bebidas: (limpio.bebidas || []).map(item => ({ id: item.id, nombre: String(item.nombre || '').trim(), precio: Number(item.precio || 0), icono: item.icono || DEFINICIONES_CATALOGO.bebidas.iconoDefecto })),
+    comida: (limpio.comida || []).map(item => mapProductoCatalogo(item, 'comida')),
+    adiciones: (limpio.adiciones || []).map(item => mapProductoCatalogo(item, 'adiciones')),
+    bebidas: (limpio.bebidas || []).map(item => mapProductoCatalogo(item, 'bebidas')),
     updatedAt: window.firebase?.firestore?.FieldValue?.serverTimestamp ? window.firebase.firestore.FieldValue.serverTimestamp() : new Date(),
-    updatedBy: String(localStorage.getItem('usuarioEmailActual') || '')
+    updatedBy: String(localStorage.getItem('usuarioEmailActual') || ''),
+    fuente: 'pos-la-parepa'
   };
 }
 
@@ -1791,6 +1862,10 @@ function escucharCatalogoFirestore() {
     catalogoUnsubscribe();
     catalogoUnsubscribe = null;
   }
+  if (typeof pedidosCatalogoUnsubscribe === 'function') {
+    pedidosCatalogoUnsubscribe();
+    pedidosCatalogoUnsubscribe = null;
+  }
   const ref = obtenerRefCatalogoFirestore();
   if (!ref) return;
   catalogoUnsubscribe = ref.onSnapshot(async (doc) => {
@@ -1847,9 +1922,14 @@ function normalizarCatalogoProductos(origen = null) {
     const lista = Array.isArray(base[categoriaId]) ? base[categoriaId] : [];
     salida[categoriaId] = lista.map((producto, index) => ({
       id: producto?.id || generarIdProductoCatalogo(categoriaId),
-      nombre: String(producto?.nombre || '').trim() || `${DEFINICIONES_CATALOGO[categoriaId].titulo} ${index + 1}`,
-      precio: Number(producto?.precio || 0),
-      icono: producto?.icono || iconoDefecto
+      nombre: String(producto?.nombre || producto?.name || '').trim() || `${DEFINICIONES_CATALOGO[categoriaId].titulo} ${index + 1}`,
+      precio: Number(producto?.precio ?? producto?.price ?? 0),
+      icono: producto?.icono || iconoDefecto,
+      imgData: obtenerImagenProductoCatalogo(producto),
+      imageUrl: String(producto?.imageUrl || producto?.urlImagen || producto?.imgUrl || '').trim(),
+      descripcion: String(producto?.descripcion || producto?.desc || '').trim(),
+      activo: producto?.activo === false || producto?.active === false ? false : true,
+      actualizadoEn: producto?.actualizadoEn || producto?.updatedAt || ''
     })).filter(producto => producto.nombre);
   });
   return salida;
@@ -1956,18 +2036,36 @@ function cerrarEditorCatalogo() {
 function renderizarEditorCatalogo() {
   const contenedor = document.getElementById('editorCatalogoContenido');
   if (!contenedor) return;
-  contenedor.innerHTML = Object.keys(DEFINICIONES_CATALOGO).map(categoriaId => {
+  contenedor.innerHTML = `
+    <div class="bg-white border border-yellow-100 rounded-2xl p-4 shadow-sm">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <h4 class="font-black text-gray-800 text-lg">Configuración del menú que ve el cliente</h4>
+          <p class="text-sm text-gray-600 mt-1">Estos productos salen del menú de venta del sistema. Las imágenes se comprimen automáticamente para guardarse en Firestore y mostrarse en el catálogo por QR.</p>
+        </div>
+        <span class="text-xs font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 px-3 py-2 rounded-full">Imagen + nombre + precio</span>
+      </div>
+    </div>
+  ` + Object.keys(DEFINICIONES_CATALOGO).map(categoriaId => {
     const def = DEFINICIONES_CATALOGO[categoriaId];
     const filas = (catalogoProductos[categoriaId] || []).map((producto, index) => `
-      <tr id="fila-editor-${categoriaId}-${producto.id}">
+      <tr id="fila-editor-${categoriaId}-${producto.id}" class="align-top">
         <td class="p-2 border text-center text-sm text-gray-500">${index + 1}</td>
-        <td class="p-2 border">
+        <td class="p-2 border w-[170px]">
+          ${renderizarCeldaImagenProductoEditor(categoriaId, producto)}
+        </td>
+        <td class="p-2 border min-w-[220px]">
           <input type="text" id="input-nombre-editor-${categoriaId}-${producto.id}" value="${escaparHTML(producto.nombre)}" oninput="actualizarNombreProductoEditor('${categoriaId}', '${producto.id}', this.value)" class="w-full border border-yellow-200 rounded-lg px-3 py-2 text-sm" placeholder="Nombre del producto">
+          <textarea oninput="actualizarDescripcionProductoEditor('${categoriaId}', '${producto.id}', this.value)" class="mt-2 w-full border border-yellow-100 rounded-lg px-3 py-2 text-xs text-gray-600" rows="2" placeholder="Descripción corta para el catálogo del cliente">${escaparHTML(producto.descripcion || '')}</textarea>
         </td>
         <td class="p-2 border w-[180px]">
           <input type="text" value="${formatearNumeroConPuntosEntrada(producto.precio)}" oninput="actualizarPrecioProductoEditor('${categoriaId}', '${producto.id}', this)" class="w-full border border-yellow-200 rounded-lg px-3 py-2 text-sm text-right" placeholder="0">
+          <label class="mt-2 flex items-center justify-center gap-2 text-xs text-gray-600">
+            <input type="checkbox" ${producto.activo === false ? '' : 'checked'} onchange="actualizarEstadoActivoProductoEditor('${categoriaId}', '${producto.id}', this.checked)">
+            Visible en catálogo
+          </label>
         </td>
-        <td class="p-2 border text-center w-[90px]">
+        <td class="p-2 border text-center w-[100px]">
           <button type="button" onclick="eliminarProductoEditor('${categoriaId}', '${producto.id}')" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-semibold">Eliminar</button>
         </td>
       </tr>
@@ -1986,13 +2084,14 @@ function renderizarEditorCatalogo() {
             <thead class="bg-yellow-50 text-gray-600">
               <tr>
                 <th class="p-2 border w-16">#</th>
-                <th class="p-2 border text-left">Nombre</th>
-                <th class="p-2 border text-right">Precio</th>
+                <th class="p-2 border text-left">Imagen catálogo</th>
+                <th class="p-2 border text-left">Nombre y descripción</th>
+                <th class="p-2 border text-right">Precio / visibilidad</th>
                 <th class="p-2 border text-center">Acción</th>
               </tr>
             </thead>
             <tbody>
-              ${filas || `<tr><td colspan="4" class="p-4 text-center text-gray-500">Todavía no hay productos en esta sección.</td></tr>`}
+              ${filas || `<tr><td colspan="5" class="p-4 text-center text-gray-500">Todavía no hay productos en esta sección.</td></tr>`}
             </tbody>
           </table>
         </div>
@@ -2000,6 +2099,122 @@ function renderizarEditorCatalogo() {
     `;
   }).join('');
   enfocarUltimoProductoCreadoEditor();
+}
+
+
+function obtenerImagenProductoCatalogo(producto = {}) {
+  return String(producto?.imgData || producto?.imagenData || producto?.imagen || producto?.img || '').trim();
+}
+
+function renderizarCeldaImagenProductoEditor(categoriaId, producto) {
+  const imagen = obtenerImagenProductoCatalogo(producto) || producto.imageUrl || producto.urlImagen || '';
+  const tieneImagen = !!imagen;
+  const preview = tieneImagen
+    ? `<img src="${escaparHTML(imagen)}" alt="${escaparHTML(producto.nombre || 'Producto')}" class="w-full h-full object-cover">`
+    : `<span class="text-[11px] text-gray-400 font-semibold text-center px-2">Sin imagen</span>`;
+  return `
+    <div class="space-y-2">
+      <div class="w-28 h-28 mx-auto rounded-2xl border border-yellow-200 bg-yellow-50 overflow-hidden flex items-center justify-center">
+        ${preview}
+      </div>
+      <label class="block text-center cursor-pointer bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl px-3 py-2 text-xs font-bold">
+        Cargar imagen
+        <input type="file" accept="image/*" class="hidden" onchange="cargarImagenProductoEditor('${categoriaId}', '${producto.id}', this)">
+      </label>
+      <button type="button" onclick="quitarImagenProductoEditor('${categoriaId}', '${producto.id}')" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl px-3 py-2 text-xs font-semibold ${tieneImagen ? '' : 'opacity-50 pointer-events-none'}">Quitar imagen</button>
+      <p id="estado-img-${categoriaId}-${producto.id}" class="text-[11px] text-center text-gray-500 min-h-[16px]">${tieneImagen ? 'Lista para catálogo' : 'JPG/PNG recomendado'}</p>
+    </div>
+  `;
+}
+
+function leerArchivoComoDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function cargarImagenDesdeDataURL(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('La imagen no se pudo procesar.'));
+    img.src = dataUrl;
+  });
+}
+
+function estimarBytesDataURL(dataUrl = '') {
+  const base64 = String(dataUrl).split(',')[1] || '';
+  return Math.ceil((base64.length * 3) / 4);
+}
+
+async function procesarImagenProductoParaFirestore(file) {
+  if (!file || !String(file.type || '').startsWith('image/')) {
+    throw new Error('Selecciona una imagen válida.');
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    throw new Error('La imagen es muy pesada. Usa una menor de 8 MB.');
+  }
+  const original = await leerArchivoComoDataURL(file);
+  const img = await cargarImagenDesdeDataURL(original);
+  const limiteBytes = 55000;
+  let ladoMaximo = 520;
+  let calidad = 0.74;
+  let ultimaSalida = '';
+
+  for (let intento = 0; intento < 10; intento += 1) {
+    const escala = Math.min(1, ladoMaximo / Math.max(img.width || ladoMaximo, img.height || ladoMaximo));
+    const width = Math.max(260, Math.round((img.width || ladoMaximo) * escala));
+    const height = Math.max(260, Math.round((img.height || ladoMaximo) * escala));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+    ultimaSalida = canvas.toDataURL('image/jpeg', calidad);
+    if (estimarBytesDataURL(ultimaSalida) <= limiteBytes) return ultimaSalida;
+    if (calidad > 0.46) calidad = Math.max(0.42, calidad - 0.08);
+    else ladoMaximo = Math.max(320, ladoMaximo - 70);
+  }
+  return ultimaSalida;
+}
+
+async function cargarImagenProductoEditor(categoriaId, productoId, input) {
+  const producto = (catalogoProductos[categoriaId] || []).find(item => item.id === productoId);
+  const file = input?.files?.[0];
+  if (!producto || !file) return;
+  const estado = document.getElementById(`estado-img-${categoriaId}-${productoId}`);
+  try {
+    if (estado) estado.textContent = 'Procesando imagen...';
+    const dataUrl = await procesarImagenProductoParaFirestore(file);
+    producto.imgData = dataUrl;
+    producto.imageUrl = '';
+    producto.actualizadoEn = new Date().toISOString();
+    guardarCatalogoProductosLocal();
+    renderizarEditorCatalogo();
+    actualizarEstadoCatalogoSync('Imagen lista. Presiona Guardar y publicar menú digital.', 'info');
+  } catch (error) {
+    console.error('No se pudo cargar la imagen del producto:', error);
+    if (estado) estado.textContent = 'Error al cargar';
+    alert(error?.message || 'No se pudo cargar la imagen.');
+  } finally {
+    if (input) input.value = '';
+  }
+}
+
+function quitarImagenProductoEditor(categoriaId, productoId) {
+  const producto = (catalogoProductos[categoriaId] || []).find(item => item.id === productoId);
+  if (!producto) return;
+  producto.imgData = '';
+  producto.imageUrl = '';
+  producto.actualizadoEn = new Date().toISOString();
+  guardarCatalogoProductosLocal();
+  renderizarEditorCatalogo();
+  actualizarEstadoCatalogoSync('Imagen retirada. Presiona Guardar y publicar menú digital.', 'warn');
 }
 
 function enfocarUltimoProductoCreadoEditor() {
@@ -2027,7 +2242,12 @@ function agregarProductoEditor(categoriaId) {
     id: generarIdProductoCatalogo(categoriaId),
     nombre: '',
     precio: 0,
-    icono: DEFINICIONES_CATALOGO[categoriaId]?.iconoDefecto || '•'
+    icono: DEFINICIONES_CATALOGO[categoriaId]?.iconoDefecto || '•',
+    imgData: '',
+    imageUrl: '',
+    descripcion: '',
+    activo: true,
+    actualizadoEn: new Date().toISOString()
   };
   catalogoProductos[categoriaId].push(nuevoProducto);
   ultimoProductoEditorCreado = { categoriaId, productoId: nuevoProducto.id };
@@ -2046,6 +2266,21 @@ function actualizarPrecioProductoEditor(categoriaId, productoId, input) {
   const limpio = limpiarNumeroEntero(input.value);
   producto.precio = Number(limpio || 0);
   input.value = formatearNumeroConPuntosEntrada(limpio);
+}
+
+
+function actualizarDescripcionProductoEditor(categoriaId, productoId, valor) {
+  const producto = (catalogoProductos[categoriaId] || []).find(item => item.id === productoId);
+  if (!producto) return;
+  producto.descripcion = String(valor || '').trimStart();
+  producto.actualizadoEn = new Date().toISOString();
+}
+
+function actualizarEstadoActivoProductoEditor(categoriaId, productoId, activo) {
+  const producto = (catalogoProductos[categoriaId] || []).find(item => item.id === productoId);
+  if (!producto) return;
+  producto.activo = !!activo;
+  producto.actualizadoEn = new Date().toISOString();
 }
 
 function eliminarProductoEditor(categoriaId, productoId) {
@@ -2078,11 +2313,11 @@ async function guardarCatalogoDesdeEditor() {
   guardarCatalogoProductosLocal();
   renderizarCatalogoProductosUI();
 
-  let mensajeFinal = 'Catálogo actualizado correctamente en este equipo.';
+  let mensajeFinal = 'Menú digital actualizado correctamente en este equipo.';
   if (tienePermisoGestionCatalogoRemoto() && firestoreDisponible && firestoreDb) {
     try {
       await guardarCatalogoProductosRemoto(true);
-      mensajeFinal = 'Catálogo actualizado correctamente en este dispositivo.';
+      mensajeFinal = 'Menú digital publicado correctamente en Firestore.';
     } catch (error) {
       console.error('No se pudo guardar el catálogo en Firebase:', error);
       mensajeFinal = 'Catálogo guardado en este equipo, pero Firebase no lo pudo sincronizar. Revisa permisos o conexión.';
@@ -2289,7 +2524,7 @@ function aplicarAjustesInventarioLocal(ajustes = {}) {
 
 async function aplicarAjustesInventarioFirestore(ajustes = {}) {
   const entradas = Object.entries(ajustes || {});
-  if (!entradas.length || !firestoreDisponible || !firestoreDb || !firebaseAuth?.currentUser) return;
+  if (!entradas.length || !firestoreDisponible || !firestoreDb) return;
   for (const [clave, ajuste] of entradas) {
     try {
       const snapshot = await firestoreDb.collection(INVENTARIO_COLLECTION)
@@ -3300,38 +3535,47 @@ async function renderResumenCajaFecha(diaClave, forzarRemoto = false) {
 }
 
 function actualizarIndicadorFirebase(estado, detalle = "") {
-  firebaseConexionEstado = "local";
+  firebaseConexionEstado = estado || "desconectado";
   const dot = document.getElementById("firebaseStatusDot");
   const text = document.getElementById("firebaseStatusText");
   const sub = document.getElementById("firebaseStatusSubtext");
   if (!dot || !text || !sub) return;
 
-  dot.className = "inline-flex w-3 h-3 rounded-full bg-green-500";
-  text.className = "font-bold text-green-600";
-  text.textContent = "Independiente";
-  sub.textContent = detalle || "Datos guardados en este dispositivo";
+  const conectado = estado === "conectado";
+  const local = estado === "local";
+  dot.className = `inline-flex w-3 h-3 rounded-full ${conectado ? 'bg-green-500' : local ? 'bg-amber-500' : 'bg-red-500'}`;
+  text.className = `font-bold ${conectado ? 'text-green-600' : local ? 'text-amber-600' : 'text-red-600'}`;
+  text.textContent = conectado ? "Firebase conectado" : local ? "Modo local" : "Sin conexión";
+  sub.textContent = detalle || (conectado ? "Sincronizando ventas, catálogo y pedidos" : "Trabajando con datos locales");
 }
 
 function registrarHeartbeatFirebase() {
   ultimoHeartbeatFirebase = Date.now();
-  actualizarIndicadorFirebase("local", "Datos guardados en este dispositivo");
+  actualizarIndicadorFirebase("conectado", "Sincronización activa con Firebase");
 }
 
 function iniciarMonitorConexionFirebase() {
-  if (monitorFirebaseInterval) {
-    clearInterval(monitorFirebaseInterval);
-    monitorFirebaseInterval = null;
-  }
-  actualizarIndicadorFirebase("local", "Sistema independiente sin conexión a base de datos externa");
+  if (monitorFirebaseInterval) clearInterval(monitorFirebaseInterval);
+  monitorFirebaseInterval = setInterval(() => {
+    if (!firestoreDisponible) actualizarIndicadorFirebase("desconectado", "Firebase no disponible");
+    else if (Date.now() - ultimoHeartbeatFirebase > 90000) actualizarIndicadorFirebase("conectado", "Esperando nuevos cambios");
+  }, 30000);
 }
 
-window.addEventListener("online", () => { actualizarIndicadorFirebase("local", "Sistema independiente sin conexión a base de datos externa"); });
+window.addEventListener("online", () => { if (!firestoreDisponible) inicializarFirebaseVentas(); else actualizarIndicadorFirebase("conectado", "Conexión recuperada"); });
 
-window.addEventListener("offline", () => { actualizarIndicadorFirebase("local", "Funciona en este dispositivo con almacenamiento local"); });
+window.addEventListener("offline", () => { actualizarIndicadorFirebase("local", "Sin internet: usando copia local temporal"); });
 
-// Firebase fue desconectado para que esta página funcione de forma independiente.
-const firebaseConfig = {};
-const MODO_INDEPENDIENTE_LOCAL = true;
+// Firebase conectado para sincronizar catálogo, ventas y pedidos de mesa.
+const firebaseConfig = {
+  apiKey: "AIzaSyAsVvq-okZdhi3eeigyw0CuNMgNe30mYJA",
+  authDomain: "webcatalogo-e8b89.firebaseapp.com",
+  projectId: "webcatalogo-e8b89",
+  storageBucket: "webcatalogo-e8b89.appspot.com",
+  messagingSenderId: "603338095024",
+  appId: "1:603338095024:web:8ffac945f31a0fc4d8be75"
+};
+const MODO_INDEPENDIENTE_LOCAL = false;
 
 
 function resolverRegistroUsuario(entradaUsuario = "") {
@@ -3397,13 +3641,44 @@ function normalizarVenta(venta = {}) {
 
 
 const MEDIOS_PAGO_DISPONIBLES = [
-  { value: "QR Señor arepa", label: "QR Señor arepa" },
-  { value: "QR Señora arepa", label: "QR Señora arepa" },
+  { value: "QR", label: "QR La Parepa" },
   { value: "Bre-B", label: "Bre-B" },
   { value: "daviplata", label: "daviplata" },
   { value: "nequi", label: "nequi" },
   { value: "efectivo", label: "efectivo" }
 ];
+
+function normalizarTextoPagoSistema(valor = "") {
+  return String(valor || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function normalizarMedioPagoSistema(medio = "") {
+  const limpio = String(medio || "").trim();
+  const normalizado = normalizarTextoPagoSistema(limpio);
+  if (!normalizado) return "";
+  const aliasesQR = new Set([
+    "qr",
+    "qr senor arepa",
+    "qr senora arepa",
+    "qr la parepa",
+    "senor arepa",
+    "senora arepa",
+    "la parepa"
+  ]);
+  if (aliasesQR.has(normalizado)) return "QR";
+  return limpio;
+}
+
+function obtenerLabelMedioPago(medio = "") {
+  const normalizado = normalizarMedioPagoSistema(medio);
+  const item = MEDIOS_PAGO_DISPONIBLES.find(opcion => opcion.value === normalizado);
+  return item ? item.label : (normalizado || "-");
+}
 let detallePagoMixtoActual = [];
 
 function redondearPago(valor) {
@@ -3417,7 +3692,7 @@ function obtenerTotalCobradoVenta(venta = {}) {
 }
 
 function crearDetallePagoSimple(medio = "", valor = 0) {
-  const medioLimpio = String(medio || "").trim();
+  const medioLimpio = normalizarMedioPagoSistema(medio);
   const monto = redondearPago(valor);
   if (!medioLimpio || monto <= 0) return [];
   return [{ medio: medioLimpio, valor: monto }];
@@ -3428,7 +3703,7 @@ function normalizarDetallePagos(detalle = [], totalEsperado = 0) {
   const permitidos = new Set(MEDIOS_PAGO_DISPONIBLES.map(item => item.value));
   const acumulado = new Map();
   detalle.forEach(item => {
-    const medio = String(item?.medio || item?.metodo || item?.formaPago || "").trim();
+    const medio = normalizarMedioPagoSistema(item?.medio || item?.metodo || item?.formaPago || "");
     const valor = redondearPago(item?.valor);
     if (!permitidos.has(medio) || valor <= 0) return;
     acumulado.set(medio, redondearPago((acumulado.get(medio) || 0) + valor));
@@ -3453,9 +3728,9 @@ function obtenerDetallePagosVenta(venta = {}) {
 }
 
 function obtenerValorPagoPorMedio(venta = {}, medio = "") {
-  const medioLimpio = String(medio || "").trim().toLowerCase();
+  const medioLimpio = normalizarMedioPagoSistema(medio).toLowerCase();
   return redondearPago(obtenerDetallePagosVenta(venta)
-    .filter(item => String(item.medio || "").trim().toLowerCase() === medioLimpio)
+    .filter(item => normalizarMedioPagoSistema(item.medio || "").toLowerCase() === medioLimpio)
     .reduce((acc, item) => acc + Number(item.valor || 0), 0));
 }
 
@@ -3484,9 +3759,9 @@ function esPagoMixto(venta = {}) {
 
 function obtenerEtiquetaFormaPago(venta = {}) {
   const detalle = obtenerDetallePagosVenta(venta);
-  if (!detalle.length) return venta?.formaPago || "-";
-  if (detalle.length === 1) return detalle[0].medio;
-  return `mixto · ${detalle.map(item => `${item.medio}: ${formatearCOP(item.valor)}`).join(" + ")}`;
+  if (!detalle.length) return obtenerLabelMedioPago(venta?.formaPago) || "-";
+  if (detalle.length === 1) return obtenerLabelMedioPago(detalle[0].medio);
+  return `mixto · ${detalle.map(item => `${obtenerLabelMedioPago(item.medio)}: ${formatearCOP(item.valor)}`).join(" + ")}`;
 }
 
 function obtenerTotalCobradoActual() {
@@ -3760,7 +4035,7 @@ function programarSyncVentasPendientes(delay = 200) {
 
 async function sincronizarVentasPendientesEnSegundoPlano() {
   if (sincronizandoVentasPendientes) return;
-  if (!firestoreDisponible || !firestoreDb || !firebaseAuth?.currentUser) return;
+  if (!firestoreDisponible || !firestoreDb) return;
 
   const pendientes = obtenerVentasPendientesSync();
   if (!pendientes.length) return;
@@ -3795,7 +4070,7 @@ function ordenarVentasDesc(ventas) {
 }
 
 async function inicializarFirebaseVentas() {
-  if (firebaseInicializado) return;
+  if (firebaseInicializado && firestoreDisponible) return;
   firebaseInicializado = true;
 
   firebaseApp = null;
@@ -3804,13 +4079,44 @@ async function inicializarFirebaseVentas() {
   authDisponible = false;
   firestoreDisponible = false;
 
-  actualizarIndicadorFirebase("local", "Sistema independiente: datos guardados en este dispositivo");
-  inventarioBebidasEstado = obtenerMapaInventarioLocal();
-  actualizarAlertasStockBebidas(inventarioBebidasEstado);
-  cargarCatalogoProductos();
-  guardarVentasEnCache(ordenarVentasDesc(obtenerVentasStorage()));
+  try {
+    if (!window.firebase || !firebaseConfig?.apiKey) throw new Error("Firebase no está cargado o falta configuración.");
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    firebaseApp = firebase.app();
+    firestoreDb = firebase.firestore();
+    try { firestoreDb.settings({ experimentalForceLongPolling: true, useFetchStreams: false, merge: true }); } catch (_) {}
+    firebaseAuth = firebase.auth ? firebase.auth() : null;
+    if (firebaseAuth) {
+      try {
+        if (!firebaseAuth.currentUser && firebaseAuth.signInAnonymously) await firebaseAuth.signInAnonymously();
+        authDisponible = !!firebaseAuth.currentUser;
+      } catch (authError) {
+        console.warn("Auth anónimo no disponible; se intentará usar Firestore sin sesión:", authError);
+        authDisponible = false;
+      }
+    }
+
+    firestoreDisponible = true;
+    registrarHeartbeatFirebase();
+    cargarCatalogoProductos();
+    guardarVentasEnCache(ordenarVentasDesc(obtenerVentasStorage()));
+    escucharVentasFirestore();
+    escucharCatalogoFirestore();
+    escucharInventarioFirestore();
+    escucharPedidosCatalogoFirestore();
+    programarSyncVentasPendientes(300);
+    iniciarMonitorConexionFirebase();
+  } catch (error) {
+    console.error("No se pudo iniciar Firebase:", error);
+    actualizarIndicadorFirebase("local", "Firebase no disponible. Usando datos locales.");
+    inventarioBebidasEstado = obtenerMapaInventarioLocal();
+    actualizarAlertasStockBebidas(inventarioBebidasEstado);
+    cargarCatalogoProductos();
+  }
+
   mostrarVentas();
   refrescarVistasAnaliticasSiEstanAbiertas();
+  renderPedidosCatalogo();
 }
 
 function escucharVentasFirestore() {
@@ -4004,6 +4310,10 @@ async function cerrarSesionRol() {
   if (typeof catalogoUnsubscribe === 'function') {
     catalogoUnsubscribe();
     catalogoUnsubscribe = null;
+  }
+  if (typeof pedidosCatalogoUnsubscribe === 'function') {
+    pedidosCatalogoUnsubscribe();
+    pedidosCatalogoUnsubscribe = null;
   }
   limpiarSesionLocal();
   actualizarEstadoCatalogoSync('Catálogo guardado en este dispositivo', 'neutral');
@@ -4396,6 +4706,7 @@ function aplicarPermisosPorRol() {
   actualizarCampoCostoDomicilio();
   actualizarResumenPagoMixtoUI();
   actualizarVistaPedido();
+  pedidoCatalogoActualId = null;
   irAPasoVenta(1);
 }
 
@@ -4507,7 +4818,8 @@ function cancelarPedidoActual() {
       comanda: numeracionDia.comanda,
       recibo: numeracionDia.recibo,
       usuario: usuarioActual || "",
-      rolUsuario: rolActual || ""
+      rolUsuario: rolActual || "",
+      pedidoCatalogoId: pedidoCatalogoActualId || ventaOriginalEnEdicion?.pedidoCatalogoId || null
     };
 
     const esVentaNueva = !ventaDocIdEnEdicion;
@@ -4559,6 +4871,10 @@ function cancelarPedidoActual() {
         alert("Venta guardada exitosamente.");
       }
 
+      if (pedidoCatalogoActualId) {
+        marcarPedidoCatalogoEstado(pedidoCatalogoActualId, "procesado", false);
+        pedidoCatalogoActualId = null;
+      }
       limpiarPedido();
       mostrarVentas();
       refrescarVistasAnaliticasSiEstanAbiertas();
@@ -4570,6 +4886,216 @@ function cancelarPedidoActual() {
       console.error("Error al guardar la venta:", error);
       alert("No se pudo guardar la venta. Revisa la conexión o la configuración de Firebase.");
     }
+  }
+
+
+
+  function obtenerPedidoPOSDesdeCatalogo(orden = {}) {
+    const origen = Array.isArray(orden.pedidoPOS) && orden.pedidoPOS.length ? orden.pedidoPOS : (orden.pedido || []);
+    const salida = [];
+    origen.forEach(item => {
+      const nombre = String(item?.nombre || item?.name || item?.producto || '').trim();
+      const precioUnitario = Number(item?.precio ?? item?.unitPrice ?? item?.valor ?? 0);
+      const cantidad = Math.max(1, Number(item?.cantidad ?? item?.qty ?? 1));
+      if (!nombre || !Number.isFinite(precioUnitario)) return;
+      for (let i = 0; i < cantidad; i++) salida.push({ nombre, precio: precioUnitario });
+    });
+    return salida;
+  }
+
+  function escucharPedidosCatalogoFirestore() {
+    if (!firestoreDisponible || !firestoreDb) {
+      renderPedidosCatalogo();
+      return;
+    }
+    if (typeof pedidosCatalogoUnsubscribe === 'function') pedidosCatalogoUnsubscribe();
+    try {
+      pedidosCatalogoUnsubscribe = firestoreDb.collection(PEDIDOS_CATALOGO_COLLECTION)
+        .orderBy('fechaISO', 'desc')
+        .limit(40)
+        .onSnapshot((snapshot) => {
+          registrarHeartbeatFirebase();
+          pedidosCatalogoCache = snapshot.docs
+            .map(doc => ({ _docId: doc.id, ...doc.data() }))
+            .filter(p => !['procesado','cancelado'].includes(String(p.estado || 'nuevo').toLowerCase()));
+          renderPedidosCatalogo();
+        }, (error) => {
+          console.error('No se pudieron escuchar pedidos del catálogo:', error);
+          const estado = document.getElementById('pedidosCatalogoEstado');
+          if (estado) estado.textContent = 'No se pudieron sincronizar los pedidos del catálogo.';
+          renderPedidosCatalogo();
+        });
+    } catch (error) {
+      console.error('Error iniciando pedidos del catálogo:', error);
+      renderPedidosCatalogo();
+    }
+  }
+
+  async function refrescarPedidosCatalogoManual() {
+    if (!firestoreDisponible || !firestoreDb) {
+      alert('Firebase no está conectado.');
+      return;
+    }
+    try {
+      const snapshot = await firestoreDb.collection(PEDIDOS_CATALOGO_COLLECTION).orderBy('fechaISO', 'desc').limit(40).get();
+      pedidosCatalogoCache = snapshot.docs.map(doc => ({ _docId: doc.id, ...doc.data() }))
+        .filter(p => !['procesado','cancelado'].includes(String(p.estado || 'nuevo').toLowerCase()));
+      renderPedidosCatalogo();
+    } catch (error) {
+      console.error('No se pudo refrescar pedidos del catálogo:', error);
+      alert('No se pudieron cargar los pedidos del catálogo.');
+    }
+  }
+
+  function renderPedidosCatalogo() {
+    const lista = document.getElementById('pedidosCatalogoLista');
+    const estado = document.getElementById('pedidosCatalogoEstado');
+    if (!lista) return;
+    const pedidos = Array.isArray(pedidosCatalogoCache) ? pedidosCatalogoCache : [];
+    if (estado) {
+      estado.textContent = firestoreDisponible
+        ? `${pedidos.length} pedido${pedidos.length === 1 ? '' : 's'} pendiente${pedidos.length === 1 ? '' : 's'} del catálogo.`
+        : 'Firebase no está conectado. Los pedidos aparecerán aquí al conectar la base de datos.';
+    }
+    if (!pedidos.length) {
+      lista.innerHTML = '<div class="col-span-full bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-sm text-gray-600">Aún no hay pedidos nuevos desde el catálogo.</div>';
+      return;
+    }
+    lista.innerHTML = pedidos.map(pedido => construirTarjetaPedidoCatalogo(pedido)).join('');
+  }
+
+  function construirTarjetaPedidoCatalogo(orden = {}) {
+    const pedidoPOS = obtenerPedidoPOSDesdeCatalogo(orden);
+    const totalOrden = Number(orden.totalCobrado ?? orden.total ?? orden.subtotalProductos ?? pedidoPOS.reduce((acc, item) => acc + Number(item.precio || 0), 0));
+    const mesa = String(orden.mesa || orden.numeroMesa || '').trim() || 'Sin mesa';
+    const cliente = String(orden.cliente || orden.nombreCliente || '').trim() || 'Sin nombre';
+    const estado = String(orden.estado || 'nuevo').toLowerCase();
+    const fecha = orden.fechaISO ? formatearFechaHoraColombia(orden.fechaISO) : (orden.fecha || 'Ahora');
+    const productos = pedidoPOS.length
+      ? pedidoPOS.map(item => `<li>${escaparHTML(item.nombre)} · ${formatearCOP(item.precio)}</li>`).join('')
+      : '<li>Pedido sin productos visibles.</li>';
+    return `
+      <article class="border border-yellow-200 bg-yellow-50 rounded-2xl p-4 shadow-sm">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wide text-yellow-700">Mesa ${escaparHTML(mesa)}</p>
+            <h4 class="text-lg font-bold text-gray-800">${escaparHTML(cliente)}</h4>
+            <p class="text-xs text-gray-500">${escaparHTML(fecha)} · Estado: ${escaparHTML(estado)}</p>
+          </div>
+          <p class="font-bold text-gray-800 whitespace-nowrap">${formatearCOP(totalOrden)}</p>
+        </div>
+        <ul class="mt-3 bg-white rounded-xl border border-yellow-100 p-3 text-sm text-gray-700 space-y-1">${productos}</ul>
+        ${orden.observaciones ? `<p class="mt-2 text-sm text-gray-600"><b>Notas:</b> ${escaparHTML(orden.observaciones)}</p>` : ''}
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button type="button" onclick="cargarPedidoCatalogoEnPOS('${escaparHTML(orden._docId)}')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold">Cargar en nueva venta</button>
+          <button type="button" onclick="marcarPedidoCatalogoEstado('${escaparHTML(orden._docId)}','recibido')" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold">Marcar recibido</button>
+          <button type="button" onclick="marcarPedidoCatalogoEstado('${escaparHTML(orden._docId)}','cancelado')" class="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-xl text-sm font-semibold">Cancelar</button>
+        </div>
+      </article>
+    `;
+  }
+
+  function cargarPedidoCatalogoEnPOS(docId = '') {
+    const orden = pedidosCatalogoCache.find(item => item._docId === docId);
+    if (!orden) {
+      alert('No se encontró el pedido del catálogo.');
+      return;
+    }
+    const items = obtenerPedidoPOSDesdeCatalogo(orden);
+    if (!items.length) {
+      alert('El pedido no tiene productos válidos.');
+      return;
+    }
+    pedido = items;
+    total = obtenerSubtotalPedidoActual();
+    pedidoCatalogoActualId = docId;
+
+    const clienteTexto = String(orden.cliente || orden.nombreCliente || '').trim();
+    const mesaTexto = String(orden.mesa || orden.numeroMesa || '').trim();
+    const clienteInput = document.getElementById('cliente');
+    const tipoInput = document.getElementById('tipoPedido');
+    const obsInput = document.getElementById('observaciones');
+    const formaInput = document.getElementById('formaPago');
+    if (clienteInput) clienteInput.value = mesaTexto ? `Mesa ${mesaTexto} - ${clienteTexto || 'Cliente'}` : (clienteTexto || 'Cliente catálogo');
+    if (tipoInput) tipoInput.value = 'Aquí';
+    if (formaInput && !formaInput.value) formaInput.value = 'QR';
+    if (obsInput) {
+      const notas = String(orden.observaciones || '').trim();
+      obsInput.value = `Pedido recibido desde catálogo${mesaTexto ? ' · Mesa ' + mesaTexto : ''}${notas ? ' · ' + notas : ''}`;
+    }
+    actualizarVistaPedido();
+    actualizarCampoCostoDomicilio();
+    irAPasoVenta(2);
+    marcarPedidoCatalogoEstado(docId, 'recibido', false);
+    scrollToPedido();
+  }
+
+  async function marcarPedidoCatalogoEstado(docId = '', estado = 'recibido', notificar = true) {
+    if (!docId || !firestoreDisponible || !firestoreDb) return;
+    try {
+      await firestoreDb.collection(PEDIDOS_CATALOGO_COLLECTION).doc(docId).set({
+        estado,
+        actualizadoEn: window.firebase?.firestore?.FieldValue?.serverTimestamp ? window.firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString(),
+        actualizadoPor: usuarioActual || ''
+      }, { merge: true });
+      pedidosCatalogoCache = pedidosCatalogoCache.filter(item => estado === 'recibido' ? true : item._docId !== docId);
+      renderPedidosCatalogo();
+      if (notificar) alert('Pedido actualizado.');
+    } catch (error) {
+      console.error('No se pudo actualizar el pedido del catálogo:', error);
+      if (notificar) alert('No se pudo actualizar el pedido del catálogo.');
+    }
+  }
+
+  function scrollToPedidosCatalogo() {
+    const el = document.getElementById('pedidosCatalogoSeccion');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function abrirGeneradorQRMesas() {
+    const modal = document.getElementById('modalQRMesas');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    const input = document.getElementById('qrCatalogoBaseUrl');
+    if (input && !input.value) input.value = localStorage.getItem('laParepaCatalogoBaseUrl') || '';
+  }
+
+  function cerrarGeneradorQRMesas() {
+    const modal = document.getElementById('modalQRMesas');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function construirUrlMesaCatalogo(baseUrl, mesa) {
+    const url = new URL(baseUrl, window.location.href);
+    url.searchParams.set('mesa', String(mesa));
+    return url.toString();
+  }
+
+  function generarQRMesas() {
+    const base = String(document.getElementById('qrCatalogoBaseUrl')?.value || '').trim();
+    const cantidad = Math.max(1, Math.min(100, Number(document.getElementById('qrCantidadMesas')?.value || 20)));
+    const cont = document.getElementById('qrMesasResultado');
+    if (!cont) return;
+    if (!base) {
+      alert('Pega primero la URL pública del catálogo.');
+      return;
+    }
+    localStorage.setItem('laParepaCatalogoBaseUrl', base);
+    cont.innerHTML = Array.from({ length: cantidad }, (_, i) => {
+      const mesa = i + 1;
+      const url = construirUrlMesaCatalogo(base, mesa);
+      const qr = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
+      return `
+        <div class="border border-gray-200 rounded-2xl p-3 text-center bg-white break-inside-avoid">
+          <h4 class="font-black text-gray-900 text-lg">Mesa ${mesa}</h4>
+          <img src="${qr}" alt="QR mesa ${mesa}" class="mx-auto my-2 w-40 h-40" />
+          <p class="text-[10px] text-gray-500 break-all">${escaparHTML(url)}</p>
+        </div>
+      `;
+    }).join('');
   }
 
   // Muestra las ventas guardadas en la tabla
@@ -5053,10 +5579,74 @@ function cancelarPedidoActual() {
     document.getElementById("resumenProductos").scrollIntoView({ behavior: "smooth" });
   }
 
+  function convertirValorCSV(valor = "") {
+    const limpio = String(valor ?? "").replace(/"/g, '""');
+    return `"${limpio}"`;
+  }
+
+  function descargarArchivoCSV(nombreArchivo = "ventas.csv", filas = []) {
+    const contenido = filas.map(fila => fila.map(convertirValorCSV).join(",")).join("\n");
+    const blob = new Blob(["\ufeff" + contenido], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nombreArchivo.replace(/\.xlsx$/i, ".csv");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportarVentasCSVFallback(ventas = [], nombreArchivo = "ventas.csv") {
+    const ventasNormalizadas = Array.isArray(ventas) ? ventas : [];
+    const filas = [[
+      "#", "Fecha", "Cliente", "Forma de Pago", "Tipo de Pedido", "N° domicilio", "Costo domicilio (COP)", "Estado", "Producto", "Precio (COP)", "Total Pedido (COP)"
+    ]];
+
+    let totalGlobal = 0;
+    const conteoProductos = {};
+
+    ventasNormalizadas.forEach((venta, i) => {
+      const ventaCancelada = esVentaCancelada(venta);
+      const totalVenta = obtenerIngresoRealVenta(venta);
+      if (!ventaCancelada) totalGlobal += Number(totalVenta || 0);
+
+      const pedidoLista = Array.isArray(venta.pedido) && venta.pedido.length ? venta.pedido : [{ nombre: "Sin productos", precio: 0 }];
+      pedidoLista.forEach(producto => {
+        filas.push([
+          venta.comanda ?? venta.recibo ?? (i + 1),
+          formatearFechaHoraColombia(venta.fechaISO || venta.fecha),
+          venta.cliente || "",
+          obtenerEtiquetaFormaPago(venta),
+          venta.tipoPedido || "",
+          obtenerNumeroDomicilio(venta) || "",
+          Number(venta.costoDomicilio || 0),
+          ventaCancelada ? "Cancelada" : "Activa",
+          producto.nombre || "Producto",
+          Number(producto.precio || 0),
+          Number(venta.totalCobrado || totalVenta || 0)
+        ]);
+        if (!ventaCancelada && producto.nombre) conteoProductos[producto.nombre] = (conteoProductos[producto.nombre] || 0) + 1;
+      });
+    });
+
+    const productoTop = Object.entries(conteoProductos).sort((a, b) => b[1] - a[1])[0];
+    filas.push([]);
+    filas.push(["", "", "", "", "", "", "", "TOTAL CONTABILIZADO:", "", "", totalGlobal]);
+    filas.push(["", "", "", "", "", "", "", "Producto más vendido:", "", productoTop ? `${productoTop[0]} (${productoTop[1]})` : "-"]);
+    descargarArchivoCSV(nombreArchivo, filas);
+  }
+
   async function exportarVentasAExcel(ventas, nombreArchivo, nombreHoja = "Ventas") {
     const ventasNormalizadas = Array.isArray(ventas) ? ventas : [];
     if (!ventasNormalizadas.length) {
       alert("No hay ventas para exportar.");
+      return;
+    }
+
+    if (!window.ExcelJS || typeof ExcelJS.Workbook !== "function") {
+      exportarVentasCSVFallback(ventasNormalizadas, nombreArchivo);
+      alert("La librería ExcelJS no cargó. Se descargó un archivo CSV compatible como respaldo.");
       return;
     }
 
@@ -5323,9 +5913,9 @@ function generarPlantillaReciboCliente(venta = {}, referencia = 1) {
     <body>
       <h2>LA PAREPA</h2>
       <div class="sub-info">
-        Matrícula No 289546<br>
-        CALLE 19#25-03 ESQUINA<br>
-        BARRIO SAN JOSÉ, ARMENIA
+        Matrícula 04106346<br>
+        Cra 72 A Bis No. 52 B 13<br>
+        Normandía
       </div>
       <div class="line"></div>
       <div class="info">
@@ -5560,7 +6150,7 @@ function editarVenta(index) {
 
   // Cargar datos al formulario
   document.getElementById("cliente").value = venta.cliente;
-  document.getElementById("formaPago").value = venta.formaPago;
+  document.getElementById("formaPago").value = normalizarMedioPagoSistema(venta.formaPago);
   detallePagoMixtoActual = normalizarDetallePagos(venta.detallePagos || venta.pagos || [], obtenerTotalCobradoVenta(venta));
   document.getElementById("tipoPedido").value = venta.tipoPedido;
   const costoDomicilioInput = document.getElementById("costoDomicilio");
@@ -5761,7 +6351,7 @@ function volverAlPOS() {
     return siguiente;
   }
 
-  function normalizarVenta(v, index) {
+  function normalizarVenta(v = {}, index = null) {
     const fechaBase = v.fechaISO ? new Date(v.fechaISO) : new Date(v.fecha);
     const fechaValida = isNaN(fechaBase.getTime()) ? new Date() : fechaBase;
     const diaClave = v.diaClave || obtenerFechaLocalISO(fechaValida);
@@ -5777,14 +6367,17 @@ function volverAlPOS() {
     const numeroDomicilio = Number(v.numeroDomicilio || 0);
     const totalCobrado = redondearPago(Number(v.totalCobrado || 0) || (subtotalProductos + costoDomicilio));
     const detallePagos = normalizarDetallePagos(v.detallePagos || v.pagos || [], totalCobrado);
+    const numeroFallback = Number.isFinite(Number(index))
+      ? Number(index) + 1
+      : (Number(v.comanda ?? v.recibo ?? 0) || 1);
     return {
       ...v,
       pedido: pedidoNormalizado,
       estado: obtenerEstadoVenta(v),
       fechaISO: v.fechaISO || fechaValida.toISOString(),
       diaClave,
-      comanda: v.comanda ?? v.recibo ?? (index + 1),
-      recibo: v.recibo ?? v.comanda ?? (index + 1),
+      comanda: v.comanda ?? v.recibo ?? numeroFallback,
+      recibo: v.recibo ?? v.comanda ?? numeroFallback,
       subtotalProductos,
       numeroDomicilio: Number.isFinite(numeroDomicilio) && numeroDomicilio > 0 ? numeroDomicilio : null,
       costoDomicilio,
@@ -6127,6 +6720,8 @@ function volverAlPOS() {
     const normalizado = normalizarTextoImportacion(base);
     if (!normalizado) return 'efectivo';
     if (normalizado.includes('mixto')) return 'mixto';
+    const medioSistema = normalizarMedioPagoSistema(base);
+    if (medioSistema === "QR") return "QR";
     const match = MEDIOS_PAGO_DISPONIBLES.find(item => normalizarTextoImportacion(item.value) === normalizado || normalizarTextoImportacion(item.label) === normalizado);
     return match ? match.value : base;
   }
@@ -6395,7 +6990,7 @@ function volverAlPOS() {
       return;
     }
 
-    if (!firestoreDisponible || !firestoreDb || !firebaseAuth?.currentUser) {
+    if (!firestoreDisponible || !firestoreDb) {
       actualizarEstadoImportacionVentasExcel('Debes estar conectado a Firebase para importar ventas históricas.', 'error');
       alert('Debes estar conectado a Firebase para importar el Excel.');
       input.value = '';
@@ -7721,6 +8316,7 @@ function mostrarModuloIndependiente(nombreModulo) {
       </style></head><body>
         <h1>LA PAREPA</h1>
         <p>Reporte diario · ${todayKey()}</p>
+        <p style="margin-top:4px;font-size:13px;color:#6b4b38">Matrícula 04106346 · Cra 72 A Bis No. 52 B 13 Normandía</p>
         <div class="grid">
           <div class="card"><div class="label">Ventas</div><div class="value">${money(r.total)}</div></div>
           <div class="card"><div class="label">Pedidos</div><div class="value">${r.ventas.length}</div></div>
