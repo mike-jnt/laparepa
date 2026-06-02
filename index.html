@@ -1694,23 +1694,35 @@
         </div>
         <button type="button" onclick="cerrarGeneradorQRMesas()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl font-bold">✕</button>
       </div>
-      <div class="p-5 overflow-auto space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="p-5 overflow-auto space-y-5">
+        <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-sm text-gray-700">
+          <b>Funcionamiento:</b> cada QR abre el catálogo del cliente con <b>tipo=mesa</b>, <b>origen=qr_mesa</b> y el número de mesa. Cuando el cliente envía el pedido, el POS lo recibe como pedido de mesa/local.
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div class="md:col-span-2">
-            <label class="block text-sm font-semibold text-gray-700 mb-1">URL pública del catálogo</label>
-            <input id="qrCatalogoBaseUrl" type="url" placeholder="https://tudominio.com/catalogo.html" class="w-full border border-yellow-300 rounded-xl p-3" />
-            <p class="text-xs text-gray-500 mt-1">Sube el archivo del catálogo a tu dominio y pega aquí esa URL.</p>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">URL pública del catálogo del cliente</label>
+            <input id="qrCatalogoBaseUrl" type="url" placeholder="https://tudominio.com/catalogo_la_parepa.html" class="w-full border border-yellow-300 rounded-xl p-3" />
+            <p class="text-xs text-gray-500 mt-1">Pega aquí la URL donde subiste el catálogo digital. El sistema agregará automáticamente la mesa al enlace.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Mesa inicial</label>
+            <input id="qrMesaInicial" type="number" min="1" max="999" value="1" class="w-full border border-yellow-300 rounded-xl p-3" />
           </div>
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-1">Cantidad de mesas</label>
             <input id="qrCantidadMesas" type="number" min="1" max="100" value="20" class="w-full border border-yellow-300 rounded-xl p-3" />
           </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Texto visible en cada QR</label>
+            <input id="qrPrefijoMesa" type="text" value="Mesa" placeholder="Ej: Mesa, Barra, Terraza" class="w-full border border-yellow-300 rounded-xl p-3" />
+            <p class="text-xs text-gray-500 mt-1">Ejemplo: Mesa 1, Mesa 2, Terraza 1.</p>
+          </div>
         </div>
         <div class="flex flex-wrap gap-2">
-          <button type="button" onclick="generarQRMesas()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-xl font-semibold">Generar QR</button>
-          <button type="button" onclick="window.print()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold">Imprimir</button>
+          <button type="button" onclick="generarQRMesas()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-xl font-semibold">Generar QR por mesa</button>
+          <button type="button" onclick="imprimirQRMesasLaParepa()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold">Imprimir QR</button>
         </div>
-        <div id="qrMesasResultado" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+        <div id="qrMesasResultado" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
       </div>
     </div>
   </div>
@@ -5535,7 +5547,17 @@ function cancelarPedidoActual() {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     const input = document.getElementById('qrCatalogoBaseUrl');
-    if (input && !input.value) input.value = localStorage.getItem('laParepaCatalogoBaseUrl') || '';
+    if (input && !input.value) input.value = obtenerBaseCatalogoSugeridaLaParepa();
+    const inicial = document.getElementById('qrMesaInicial');
+    if (inicial && !inicial.dataset.lpReady) {
+      inicial.value = localStorage.getItem('laParepaQrMesaInicial') || inicial.value || '1';
+      inicial.dataset.lpReady = '1';
+    }
+    const prefijo = document.getElementById('qrPrefijoMesa');
+    if (prefijo && !prefijo.dataset.lpReady) {
+      prefijo.value = localStorage.getItem('laParepaQrPrefijoMesa') || prefijo.value || 'Mesa';
+      prefijo.dataset.lpReady = '1';
+    }
   }
 
   function cerrarGeneradorQRMesas() {
@@ -5545,15 +5567,39 @@ function cancelarPedidoActual() {
     modal.classList.remove('flex');
   }
 
-  function construirUrlMesaCatalogo(baseUrl, mesa) {
+  function construirUrlMesaCatalogo(baseUrl, mesa, etiquetaMesa = '') {
     const url = new URL(baseUrl, window.location.href);
-    url.searchParams.set('mesa', String(mesa));
+    const mesaTexto = String(mesa || '').trim();
+    const etiqueta = String(etiquetaMesa || `Mesa ${mesaTexto}`).trim();
+    url.searchParams.set('tipo', 'mesa');
+    url.searchParams.set('origen', 'qr_mesa');
+    url.searchParams.set('mesa', mesaTexto);
+    url.searchParams.set('mesaLabel', etiqueta);
+    url.searchParams.delete('domicilio');
+    url.searchParams.delete('delivery');
     return url.toString();
+  }
+
+  function obtenerBaseCatalogoSugeridaLaParepa() {
+    const guardada = localStorage.getItem('laParepaCatalogoBaseUrl') || '';
+    if (guardada) return guardada;
+    try {
+      const actual = new URL(window.location.href);
+      const nombre = actual.pathname.split('/').pop() || '';
+      actual.search = '';
+      actual.hash = '';
+      actual.pathname = actual.pathname.replace(nombre, 'catalogo_la_parepa_qr_mesas.html');
+      return actual.toString();
+    } catch (_) {
+      return '';
+    }
   }
 
   function generarQRMesas() {
     const base = String(document.getElementById('qrCatalogoBaseUrl')?.value || '').trim();
     const cantidad = Math.max(1, Math.min(100, Number(document.getElementById('qrCantidadMesas')?.value || 20)));
+    const inicial = Math.max(1, Math.min(999, Number(document.getElementById('qrMesaInicial')?.value || 1)));
+    const prefijo = String(document.getElementById('qrPrefijoMesa')?.value || 'Mesa').trim() || 'Mesa';
     const cont = document.getElementById('qrMesasResultado');
     if (!cont) return;
     if (!base) {
@@ -5561,18 +5607,40 @@ function cancelarPedidoActual() {
       return;
     }
     localStorage.setItem('laParepaCatalogoBaseUrl', base);
+    localStorage.setItem('laParepaQrMesaInicial', String(inicial));
+    localStorage.setItem('laParepaQrPrefijoMesa', prefijo);
     cont.innerHTML = Array.from({ length: cantidad }, (_, i) => {
-      const mesa = i + 1;
-      const url = construirUrlMesaCatalogo(base, mesa);
-      const qr = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
+      const mesa = inicial + i;
+      const etiquetaMesa = `${prefijo} ${mesa}`;
+      const url = construirUrlMesaCatalogo(base, mesa, etiquetaMesa);
+      const qr = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(url)}`;
       return `
-        <div class="border border-gray-200 rounded-2xl p-3 text-center bg-white break-inside-avoid">
-          <h4 class="font-black text-gray-900 text-lg">Mesa ${mesa}</h4>
-          <img src="${qr}" alt="QR mesa ${mesa}" class="mx-auto my-2 w-40 h-40" />
-          <p class="text-[10px] text-gray-500 break-all">${escaparHTML(url)}</p>
+        <div class="border border-yellow-200 rounded-2xl p-4 text-center bg-white break-inside-avoid shadow-sm">
+          <p class="text-[11px] uppercase tracking-wide text-yellow-700 font-black">QR del catálogo</p>
+          <h4 class="font-black text-gray-900 text-xl mt-1">${escaparHTML(etiquetaMesa)}</h4>
+          <p class="text-xs text-gray-600 mt-1">Este QR pertenece a <b>${escaparHTML(etiquetaMesa)}</b>.</p>
+          <img src="${qr}" alt="QR ${escaparHTML(etiquetaMesa)}" class="mx-auto my-3 w-44 h-44" />
+          <div class="text-left bg-gray-50 border border-gray-100 rounded-xl p-2">
+            <p class="text-[10px] font-semibold text-gray-500">Información enviada al catálogo:</p>
+            <p class="text-[10px] text-gray-600">tipo=mesa · origen=qr_mesa · mesa=${escaparHTML(mesa)}</p>
+          </div>
+          <p class="text-[10px] text-gray-500 break-all mt-2">${escaparHTML(url)}</p>
+          <div class="flex flex-col gap-2 mt-3">
+            <a href="${qr}" target="_blank" rel="noopener" class="bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl px-3 py-2 text-xs font-bold">Abrir / descargar QR</a>
+            <a href="${escaparHTML(url)}" target="_blank" rel="noopener" class="bg-gray-900 hover:bg-black text-white rounded-xl px-3 py-2 text-xs font-bold">Probar catálogo</a>
+          </div>
         </div>
       `;
     }).join('');
+  }
+
+  function imprimirQRMesasLaParepa() {
+    const cont = document.getElementById('qrMesasResultado');
+    if (!cont || !cont.innerHTML.trim()) {
+      alert('Primero genera los QR de las mesas.');
+      return;
+    }
+    window.print();
   }
 
   // Muestra las ventas guardadas en la tabla
