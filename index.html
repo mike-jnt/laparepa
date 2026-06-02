@@ -998,6 +998,52 @@
 
 
 
+    <!-- Sección Menú digital / Catálogo cliente -->
+    <section id="seccionEditorCatalogo" data-role="gestion-only" class="hidden mt-8 bg-white rounded-3xl shadow-xl border border-yellow-100 overflow-hidden">
+      <div class="bg-gradient-to-br from-yellow-50 via-white to-orange-50 px-4 sm:px-6 py-5 border-b border-yellow-100">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div>
+            <p class="text-xs uppercase tracking-wide text-yellow-700 font-black">Gestión del menú digital</p>
+            <h3 class="text-2xl font-black text-gray-900 mt-1">Productos, imágenes y precios del catálogo</h3>
+            <p class="text-sm text-gray-600 mt-2 max-w-3xl">Administra aquí lo que verá el cliente al escanear el QR de la mesa. Esta sección toma como base los productos creados en Nueva venta y permite editar nombre, descripción, precio, imagen, orden y visibilidad.</p>
+            <p id="estadoCatalogoSync" class="mt-3 inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-semibold border border-blue-100">Catálogo cargado en modo local</p>
+          </div>
+          <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 lg:justify-end">
+            <button type="button" onclick="sincronizarCatalogoDesdeProductosVenta()" class="bg-gray-900 hover:bg-black text-white px-4 py-2.5 rounded-xl font-semibold text-sm">↻ Sincronizar productos</button>
+            <button type="button" onclick="guardarCatalogoDesdeEditor()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2.5 rounded-xl font-semibold text-sm">Guardar y publicar</button>
+            <button type="button" onclick="restablecerCatalogoBase()" class="bg-white hover:bg-yellow-50 text-gray-700 px-4 py-2.5 rounded-xl font-semibold text-sm border border-yellow-200">Restablecer base</button>
+            <button type="button" onclick="cerrarEditorCatalogo()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-semibold text-sm">Ocultar sección</button>
+          </div>
+        </div>
+
+        <div id="catalogoEditorResumen" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5"></div>
+
+        <div class="mt-5 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-center">
+          <div class="relative">
+            <input id="catalogoEditorBuscador" type="search" oninput="actualizarFiltroCatalogoEditor(this.value)" placeholder="Buscar producto por nombre, descripción o precio..." class="w-full border border-yellow-200 rounded-2xl px-4 py-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300 bg-white" />
+            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+          </div>
+          <div class="flex flex-wrap gap-2 justify-start lg:justify-end">
+            <button type="button" onclick="agregarProductoEditor('comida')" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-2 rounded-xl font-semibold text-sm">+ Comida</button>
+            <button type="button" onclick="agregarProductoEditor('adiciones')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2 rounded-xl font-semibold text-sm">+ Adición</button>
+            <button type="button" onclick="agregarProductoEditor('bebidas')" class="bg-orange-100 hover:bg-orange-200 text-orange-800 px-3 py-2 rounded-xl font-semibold text-sm">+ Bebida</button>
+          </div>
+        </div>
+
+        <div id="catalogoEditorTabs" class="flex gap-2 overflow-x-auto mt-4 pb-1"></div>
+      </div>
+
+      <div id="editorCatalogoContenido" class="px-4 sm:px-6 py-5 space-y-6 bg-yellow-50/50"></div>
+
+      <div class="px-4 sm:px-6 py-4 border-t border-yellow-100 bg-white flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+        <p class="text-xs text-gray-500">Consejo: sube imágenes cuadradas o verticales. El sistema las comprime antes de guardarlas en Firestore.</p>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <button type="button" onclick="sincronizarCatalogoDesdeProductosVenta()" class="px-4 py-2.5 rounded-xl bg-gray-900 hover:bg-black text-white font-semibold text-sm">↻ Sincronizar productos</button>
+          <button type="button" onclick="guardarCatalogoDesdeEditor()" class="px-4 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-white font-semibold text-sm">Guardar y publicar menú digital</button>
+        </div>
+      </div>
+    </section>
+
     <!-- Pedidos recibidos desde catálogo digital -->
     <div id="pedidosCatalogoSeccion" class="mt-8 bg-white p-4 rounded-xl shadow-md border border-yellow-100">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
@@ -1598,36 +1644,6 @@
 
 
 
-  <div id="modalEditorCatalogo" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/45 px-3 py-4 sm:px-6">
-    <div class="w-full max-w-6xl max-h-[92vh] overflow-hidden rounded-2xl bg-white shadow-2xl border border-yellow-100 flex flex-col">
-      <div class="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-yellow-100 bg-yellow-50">
-        <div>
-          <p class="text-xs uppercase tracking-wide text-yellow-700 font-bold">Gestión del menú digital</p>
-          <h3 class="text-lg sm:text-xl font-black text-gray-800">Productos, imágenes y precios del catálogo</h3>
-          <p class="text-xs sm:text-sm text-gray-500">Toma los productos ya creados en Nueva venta, permite ajustar precios, cargar imagen y publicarlo en Firestore para el menú del cliente.</p>
-          <p id="estadoCatalogoSync" class="mt-2 inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-semibold border border-blue-100">Catálogo cargado en modo local</p>
-        </div>
-        <button type="button" onclick="cerrarEditorCatalogo()" class="w-10 h-10 rounded-full bg-white border border-yellow-200 text-gray-600 hover:bg-yellow-100 text-xl leading-none">×</button>
-      </div>
-
-      <div class="px-4 sm:px-6 py-4 border-b border-yellow-100 flex flex-wrap gap-2 bg-white">
-        <button type="button" onclick="agregarProductoEditor('comida')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-xl font-semibold text-sm">+ Agregar comida</button>
-        <button type="button" onclick="agregarProductoEditor('adiciones')" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl font-semibold text-sm">+ Agregar adición</button>
-        <button type="button" onclick="agregarProductoEditor('bebidas')" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-xl font-semibold text-sm">+ Agregar bebida</button>
-        <button type="button" onclick="restablecerCatalogoBase()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl font-semibold text-sm">↺ Restablecer menú base</button>
-      </div>
-
-      <div id="editorCatalogoContenido" class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-6 bg-yellow-50/50"></div>
-
-      <div class="px-4 sm:px-6 py-4 border-t border-yellow-100 bg-white flex flex-col sm:flex-row gap-2 sm:justify-end">
-        <button type="button" onclick="cerrarEditorCatalogo()" class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold">Cancelar</button>
-        <button type="button" onclick="guardarCatalogoDesdeEditor()" class="px-4 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-white font-semibold">Guardar y publicar menú digital</button>
-      </div>
-    </div>
-  </div>
-
-
-
   <!-- Modal generador QR mesas -->
   <div id="modalQRMesas" class="fixed inset-0 bg-black/50 z-[90] hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -2011,97 +2027,195 @@ function renderizarCatalogoProductosUI() {
   Object.keys(DEFINICIONES_CATALOGO).forEach(renderizarCategoriaCatalogo);
   actualizarProductosBebidaInventarioDesdeCatalogo();
   actualizarAlertasStockBebidas();
-  if (!document.getElementById('modalEditorCatalogo')?.classList.contains('hidden')) {
+  if (!document.getElementById('seccionEditorCatalogo')?.classList.contains('hidden')) {
     renderizarEditorCatalogo();
   }
 }
 
+let catalogoEditorFiltroTexto = '';
+let catalogoEditorCategoriaActiva = 'todos';
+let catalogoEditorCambiosPendientes = false;
+
 function abrirEditorCatalogo() {
   if (!verificarAcceso(['admin', 'administrador'])) return;
-  const modal = document.getElementById('modalEditorCatalogo');
-  if (!modal) return;
+  const seccion = document.getElementById('seccionEditorCatalogo');
+  if (!seccion) return;
   renderizarEditorCatalogo();
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
-  document.body.classList.add('overflow-hidden');
+  seccion.classList.remove('hidden');
+  seccion.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function cerrarEditorCatalogo() {
-  const modal = document.getElementById('modalEditorCatalogo');
-  if (!modal) return;
-  modal.classList.add('hidden');
-  modal.classList.remove('flex');
-  document.body.classList.remove('overflow-hidden');
+  const seccion = document.getElementById('seccionEditorCatalogo');
+  if (!seccion) return;
+  seccion.classList.add('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function marcarCatalogoEditorPendiente(mensaje = 'Cambios listos. Presiona Guardar y publicar menú digital.') {
+  catalogoEditorCambiosPendientes = true;
+  guardarCatalogoProductosLocal();
+  actualizarEstadoCatalogoSync(mensaje, 'info');
+}
+
+function actualizarFiltroCatalogoEditor(valor = '') {
+  catalogoEditorFiltroTexto = String(valor || '').trim().toLowerCase();
+  renderizarEditorCatalogo();
+}
+
+function cambiarCategoriaEditorCatalogo(categoriaId = 'todos') {
+  catalogoEditorCategoriaActiva = categoriaId || 'todos';
+  renderizarEditorCatalogo();
+}
+
+function obtenerProductosCatalogoPlanos() {
+  const salida = [];
+  Object.keys(DEFINICIONES_CATALOGO).forEach(categoriaId => {
+    (catalogoProductos[categoriaId] || []).forEach((producto, index) => {
+      salida.push({ categoriaId, producto, index });
+    });
+  });
+  return salida;
+}
+
+function calcularResumenCatalogoEditor() {
+  const planos = obtenerProductosCatalogoPlanos();
+  const visibles = planos.filter(({ producto }) => producto.activo !== false).length;
+  const conImagen = planos.filter(({ producto }) => !!obtenerImagenProductoCatalogo(producto)).length;
+  const total = planos.length;
+  return { total, visibles, ocultos: total - visibles, conImagen, sinImagen: total - conImagen };
+}
+
+function renderizarResumenCatalogoEditor() {
+  const cont = document.getElementById('catalogoEditorResumen');
+  if (!cont) return;
+  const r = calcularResumenCatalogoEditor();
+  const card = (label, value, hint, cls) => `
+    <div class="rounded-2xl border ${cls} bg-white/90 p-4 shadow-sm">
+      <p class="text-xs text-gray-500 font-semibold">${label}</p>
+      <p class="text-2xl font-black text-gray-900 mt-1">${value}</p>
+      <p class="text-[11px] text-gray-500 mt-1">${hint}</p>
+    </div>`;
+  cont.innerHTML = [
+    card('Productos', r.total, 'Sincronizados con Nueva venta', 'border-yellow-100'),
+    card('Visibles', r.visibles, 'Aparecen en el catálogo del cliente', 'border-green-100'),
+    card('Con imagen', r.conImagen, 'Listos visualmente', 'border-blue-100'),
+    card('Pendientes', r.sinImagen, 'Faltan imágenes', 'border-orange-100')
+  ].join('');
+}
+
+function renderizarTabsCatalogoEditor() {
+  const cont = document.getElementById('catalogoEditorTabs');
+  if (!cont) return;
+  const total = obtenerProductosCatalogoPlanos().length;
+  const tabs = [{ key: 'todos', label: 'Todos', count: total }].concat(Object.keys(DEFINICIONES_CATALOGO).map(key => ({
+    key,
+    label: DEFINICIONES_CATALOGO[key].titulo,
+    count: (catalogoProductos[key] || []).length
+  })));
+  cont.innerHTML = tabs.map(tab => {
+    const active = catalogoEditorCategoriaActiva === tab.key;
+    return `<button type="button" onclick="cambiarCategoriaEditorCatalogo('${tab.key}')" class="whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold border ${active ? 'bg-yellow-500 text-white border-yellow-500 shadow' : 'bg-white text-gray-700 border-yellow-200 hover:bg-yellow-50'}">${tab.label} <span class="opacity-80">${tab.count}</span></button>`;
+  }).join('');
+}
+
+function productoCoincideFiltroEditor(producto = {}, categoriaId = '') {
+  if (catalogoEditorCategoriaActiva !== 'todos' && catalogoEditorCategoriaActiva !== categoriaId) return false;
+  if (!catalogoEditorFiltroTexto) return true;
+  const hay = [producto.nombre, producto.descripcion, producto.precio, DEFINICIONES_CATALOGO[categoriaId]?.titulo].join(' ').toLowerCase();
+  return hay.includes(catalogoEditorFiltroTexto);
 }
 
 function renderizarEditorCatalogo() {
   const contenedor = document.getElementById('editorCatalogoContenido');
   if (!contenedor) return;
-  contenedor.innerHTML = `
-    <div class="bg-white border border-yellow-100 rounded-2xl p-4 shadow-sm">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h4 class="font-black text-gray-800 text-lg">Configuración del menú que ve el cliente</h4>
-          <p class="text-sm text-gray-600 mt-1">Estos productos salen del menú de venta del sistema. Las imágenes se comprimen automáticamente para guardarse en Firestore y mostrarse en el catálogo por QR.</p>
-        </div>
-        <span class="text-xs font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 px-3 py-2 rounded-full">Imagen + nombre + precio</span>
-      </div>
-    </div>
-  ` + Object.keys(DEFINICIONES_CATALOGO).map(categoriaId => {
+
+  renderizarResumenCatalogoEditor();
+  renderizarTabsCatalogoEditor();
+
+  const buscador = document.getElementById('catalogoEditorBuscador');
+  if (buscador && buscador.value !== catalogoEditorFiltroTexto) buscador.value = catalogoEditorFiltroTexto;
+
+  const secciones = Object.keys(DEFINICIONES_CATALOGO).map(categoriaId => {
     const def = DEFINICIONES_CATALOGO[categoriaId];
-    const filas = (catalogoProductos[categoriaId] || []).map((producto, index) => `
-      <tr id="fila-editor-${categoriaId}-${producto.id}" class="align-top">
-        <td class="p-2 border text-center text-sm text-gray-500">${index + 1}</td>
-        <td class="p-2 border w-[170px]">
-          ${renderizarCeldaImagenProductoEditor(categoriaId, producto)}
-        </td>
-        <td class="p-2 border min-w-[220px]">
-          <input type="text" id="input-nombre-editor-${categoriaId}-${producto.id}" value="${escaparHTML(producto.nombre)}" oninput="actualizarNombreProductoEditor('${categoriaId}', '${producto.id}', this.value)" class="w-full border border-yellow-200 rounded-lg px-3 py-2 text-sm" placeholder="Nombre del producto">
-          <textarea oninput="actualizarDescripcionProductoEditor('${categoriaId}', '${producto.id}', this.value)" class="mt-2 w-full border border-yellow-100 rounded-lg px-3 py-2 text-xs text-gray-600" rows="2" placeholder="Descripción corta para el catálogo del cliente">${escaparHTML(producto.descripcion || '')}</textarea>
-        </td>
-        <td class="p-2 border w-[180px]">
-          <input type="text" value="${formatearNumeroConPuntosEntrada(producto.precio)}" oninput="actualizarPrecioProductoEditor('${categoriaId}', '${producto.id}', this)" class="w-full border border-yellow-200 rounded-lg px-3 py-2 text-sm text-right" placeholder="0">
-          <label class="mt-2 flex items-center justify-center gap-2 text-xs text-gray-600">
-            <input type="checkbox" ${producto.activo === false ? '' : 'checked'} onchange="actualizarEstadoActivoProductoEditor('${categoriaId}', '${producto.id}', this.checked)">
-            Visible en catálogo
-          </label>
-        </td>
-        <td class="p-2 border text-center w-[100px]">
-          <button type="button" onclick="eliminarProductoEditor('${categoriaId}', '${producto.id}')" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-semibold">Eliminar</button>
-        </td>
-      </tr>
-    `).join('');
+    const productos = (catalogoProductos[categoriaId] || []);
+    const productosFiltrados = productos.map((producto, index) => ({ producto, index })).filter(({ producto }) => productoCoincideFiltroEditor(producto, categoriaId));
+    if (catalogoEditorCategoriaActiva !== 'todos' && catalogoEditorCategoriaActiva !== categoriaId) return '';
+    const cards = productosFiltrados.map(({ producto, index }) => renderizarTarjetaProductoEditor(categoriaId, producto, index, productos.length)).join('');
     return `
-      <section class="bg-white border border-yellow-100 rounded-2xl shadow-sm overflow-hidden">
-        <div class="px-4 py-4 border-b border-yellow-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <section class="bg-white border border-yellow-100 rounded-3xl shadow-sm overflow-hidden">
+        <div class="px-4 py-4 border-b border-yellow-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white">
           <div>
-            <h4 class="text-lg font-bold text-gray-800">${def.titulo}</h4>
+            <h4 class="text-xl font-black text-gray-900">${def.titulo}</h4>
             <p class="text-sm text-gray-500">${def.descripcion}</p>
           </div>
-          <button type="button" onclick="agregarProductoEditor('${categoriaId}')" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-2 rounded-xl text-sm font-semibold">+ Agregar ${def.titulo.toLowerCase()}</button>
+          <div class="flex flex-wrap gap-2 items-center">
+            <span class="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-2 rounded-full">${productos.length} creados · ${productosFiltrados.length} visibles aquí</span>
+            <button type="button" onclick="agregarProductoEditor('${categoriaId}')" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-2 rounded-xl text-sm font-bold">+ Agregar</button>
+          </div>
         </div>
-        <div class="overflow-auto">
-          <table class="min-w-full text-sm bg-white">
-            <thead class="bg-yellow-50 text-gray-600">
-              <tr>
-                <th class="p-2 border w-16">#</th>
-                <th class="p-2 border text-left">Imagen catálogo</th>
-                <th class="p-2 border text-left">Nombre y descripción</th>
-                <th class="p-2 border text-right">Precio / visibilidad</th>
-                <th class="p-2 border text-center">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filas || `<tr><td colspan="5" class="p-4 text-center text-gray-500">Todavía no hay productos en esta sección.</td></tr>`}
-            </tbody>
-          </table>
+        <div class="p-4">
+          ${cards ? `<div class="grid grid-cols-1 xl:grid-cols-2 gap-4">${cards}</div>` : `<div class="rounded-2xl border border-dashed border-yellow-200 bg-yellow-50 p-6 text-center text-gray-500 text-sm">No hay productos que coincidan con el filtro en esta sección.</div>`}
         </div>
-      </section>
-    `;
-  }).join('');
+      </section>`;
+  }).filter(Boolean).join('');
+
+  contenedor.innerHTML = secciones || `<div class="bg-white border border-yellow-100 rounded-3xl p-8 text-center text-gray-500">No se encontraron productos con ese filtro.</div>`;
   enfocarUltimoProductoCreadoEditor();
 }
 
+function renderizarTarjetaProductoEditor(categoriaId, producto, index, totalCategoria) {
+  const visible = producto.activo !== false;
+  const tieneImagen = !!obtenerImagenProductoCatalogo(producto);
+  const estadoClase = visible ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-100 text-gray-500 border-gray-200';
+  const imagenClase = tieneImagen ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-orange-50 text-orange-700 border-orange-100';
+  return `
+    <article id="fila-editor-${categoriaId}-${producto.id}" class="rounded-3xl border border-yellow-100 bg-white shadow-sm overflow-hidden">
+      <div class="p-4 grid grid-cols-1 sm:grid-cols-[150px_1fr] gap-4">
+        <div>
+          ${renderizarCeldaImagenProductoEditor(categoriaId, producto)}
+        </div>
+        <div class="space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap gap-2">
+              <span class="rounded-full border px-3 py-1 text-xs font-bold ${estadoClase}">${visible ? 'Visible' : 'Oculto'}</span>
+              <span class="rounded-full border px-3 py-1 text-xs font-bold ${imagenClase}">${tieneImagen ? 'Con imagen' : 'Sin imagen'}</span>
+              <span class="rounded-full border border-yellow-100 bg-yellow-50 text-yellow-800 px-3 py-1 text-xs font-bold">#${index + 1}</span>
+            </div>
+            <div class="flex gap-1">
+              <button type="button" onclick="moverProductoEditor('${categoriaId}', '${producto.id}', -1)" ${index === 0 ? 'disabled' : ''} class="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold disabled:opacity-40">↑</button>
+              <button type="button" onclick="moverProductoEditor('${categoriaId}', '${producto.id}', 1)" ${index >= totalCategoria - 1 ? 'disabled' : ''} class="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold disabled:opacity-40">↓</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-500 mb-1">Nombre del producto</label>
+            <input type="text" id="input-nombre-editor-${categoriaId}-${producto.id}" value="${escaparHTML(producto.nombre)}" oninput="actualizarNombreProductoEditor('${categoriaId}', '${producto.id}', this.value)" class="w-full border border-yellow-200 rounded-xl px-3 py-2 text-sm font-semibold" placeholder="Nombre del producto">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-[1fr_170px] gap-3">
+            <div>
+              <label class="block text-xs font-bold text-gray-500 mb-1">Descripción para el catálogo</label>
+              <textarea oninput="actualizarDescripcionProductoEditor('${categoriaId}', '${producto.id}', this.value)" class="w-full border border-yellow-100 rounded-xl px-3 py-2 text-xs text-gray-600" rows="3" placeholder="Descripción corta para el cliente">${escaparHTML(producto.descripcion || '')}</textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-500 mb-1">Precio</label>
+              <input type="text" value="${formatearNumeroConPuntosEntrada(producto.precio)}" oninput="actualizarPrecioProductoEditor('${categoriaId}', '${producto.id}', this)" class="w-full border border-yellow-200 rounded-xl px-3 py-2 text-sm text-right font-bold" placeholder="0">
+              <label class="mt-3 flex items-center justify-between gap-2 text-xs text-gray-600 bg-yellow-50 rounded-xl px-3 py-2 border border-yellow-100">
+                <span>Mostrar al cliente</span>
+                <input type="checkbox" ${visible ? 'checked' : ''} onchange="actualizarEstadoActivoProductoEditor('${categoriaId}', '${producto.id}', this.checked)" class="w-4 h-4">
+              </label>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button type="button" onclick="duplicarProductoEditor('${categoriaId}', '${producto.id}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-xl text-xs font-bold">Duplicar</button>
+            <button type="button" onclick="eliminarProductoEditor('${categoriaId}', '${producto.id}')" class="bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 rounded-xl text-xs font-bold">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </article>`;
+}
 
 function obtenerImagenProductoCatalogo(producto = {}) {
   return String(producto?.imgData || producto?.imagenData || producto?.imagen || producto?.img || '').trim();
@@ -2197,7 +2311,7 @@ async function cargarImagenProductoEditor(categoriaId, productoId, input) {
     producto.actualizadoEn = new Date().toISOString();
     guardarCatalogoProductosLocal();
     renderizarEditorCatalogo();
-    actualizarEstadoCatalogoSync('Imagen lista. Presiona Guardar y publicar menú digital.', 'info');
+    marcarCatalogoEditorPendiente('Imagen lista. Presiona Guardar y publicar menú digital.');
   } catch (error) {
     console.error('No se pudo cargar la imagen del producto:', error);
     if (estado) estado.textContent = 'Error al cargar';
@@ -2215,7 +2329,7 @@ function quitarImagenProductoEditor(categoriaId, productoId) {
   producto.actualizadoEn = new Date().toISOString();
   guardarCatalogoProductosLocal();
   renderizarEditorCatalogo();
-  actualizarEstadoCatalogoSync('Imagen retirada. Presiona Guardar y publicar menú digital.', 'warn');
+  marcarCatalogoEditorPendiente('Imagen retirada. Presiona Guardar y publicar menú digital.');
 }
 
 function enfocarUltimoProductoCreadoEditor() {
@@ -2251,7 +2365,9 @@ function agregarProductoEditor(categoriaId) {
     actualizadoEn: new Date().toISOString()
   };
   catalogoProductos[categoriaId].push(nuevoProducto);
+  catalogoEditorCategoriaActiva = categoriaId;
   ultimoProductoEditorCreado = { categoriaId, productoId: nuevoProducto.id };
+  marcarCatalogoEditorPendiente('Producto agregado. Completa la información y publica el menú digital.');
   renderizarEditorCatalogo();
 }
 
@@ -2259,6 +2375,8 @@ function actualizarNombreProductoEditor(categoriaId, productoId, valor) {
   const producto = (catalogoProductos[categoriaId] || []).find(item => item.id === productoId);
   if (!producto) return;
   producto.nombre = String(valor || '').trimStart();
+  producto.actualizadoEn = new Date().toISOString();
+  marcarCatalogoEditorPendiente();
 }
 
 function actualizarPrecioProductoEditor(categoriaId, productoId, input) {
@@ -2266,7 +2384,9 @@ function actualizarPrecioProductoEditor(categoriaId, productoId, input) {
   if (!producto || !input) return;
   const limpio = limpiarNumeroEntero(input.value);
   producto.precio = Number(limpio || 0);
+  producto.actualizadoEn = new Date().toISOString();
   input.value = formatearNumeroConPuntosEntrada(limpio);
+  marcarCatalogoEditorPendiente();
 }
 
 
@@ -2275,6 +2395,7 @@ function actualizarDescripcionProductoEditor(categoriaId, productoId, valor) {
   if (!producto) return;
   producto.descripcion = String(valor || '').trimStart();
   producto.actualizadoEn = new Date().toISOString();
+  marcarCatalogoEditorPendiente();
 }
 
 function actualizarEstadoActivoProductoEditor(categoriaId, productoId, activo) {
@@ -2282,11 +2403,81 @@ function actualizarEstadoActivoProductoEditor(categoriaId, productoId, activo) {
   if (!producto) return;
   producto.activo = !!activo;
   producto.actualizadoEn = new Date().toISOString();
+  marcarCatalogoEditorPendiente(activo ? 'Producto visible. Publica para actualizar el catálogo del cliente.' : 'Producto oculto del catálogo del cliente. Publica para aplicar.');
+  renderizarEditorCatalogo();
 }
 
 function eliminarProductoEditor(categoriaId, productoId) {
+  const producto = (catalogoProductos[categoriaId] || []).find(item => item.id === productoId);
+  const nombre = producto?.nombre || 'este producto';
+  if (!confirm(`¿Eliminar ${nombre} del menú digital?`)) return;
   catalogoProductos[categoriaId] = (catalogoProductos[categoriaId] || []).filter(item => item.id !== productoId);
+  marcarCatalogoEditorPendiente('Producto eliminado. Publica el menú digital para aplicar el cambio.');
   renderizarEditorCatalogo();
+}
+
+function duplicarProductoEditor(categoriaId, productoId) {
+  const lista = catalogoProductos[categoriaId] || [];
+  const original = lista.find(item => item.id === productoId);
+  if (!original) return;
+  const copia = clonarJSON(original);
+  copia.id = generarIdProductoCatalogo(categoriaId);
+  copia.nombre = `${copia.nombre || 'Producto'} copia`;
+  copia.actualizadoEn = new Date().toISOString();
+  const index = lista.findIndex(item => item.id === productoId);
+  lista.splice(index + 1, 0, copia);
+  ultimoProductoEditorCreado = { categoriaId, productoId: copia.id };
+  marcarCatalogoEditorPendiente('Producto duplicado. Ajusta la copia y publica el menú.');
+  renderizarEditorCatalogo();
+}
+
+function moverProductoEditor(categoriaId, productoId, direccion) {
+  const lista = catalogoProductos[categoriaId] || [];
+  const index = lista.findIndex(item => item.id === productoId);
+  const nuevoIndex = index + Number(direccion || 0);
+  if (index < 0 || nuevoIndex < 0 || nuevoIndex >= lista.length) return;
+  const [item] = lista.splice(index, 1);
+  lista.splice(nuevoIndex, 0, item);
+  marcarCatalogoEditorPendiente('Orden actualizado. Publica para verlo en el catálogo del cliente.');
+  renderizarEditorCatalogo();
+}
+
+function sincronizarCatalogoDesdeProductosVenta() {
+  const baseNueva = normalizarCatalogoProductos(extraerCatalogoBaseDesdeDOM());
+  const actual = normalizarCatalogoProductos(catalogoProductos);
+  const fusionado = { comida: [], adiciones: [], bebidas: [] };
+
+  Object.keys(DEFINICIONES_CATALOGO).forEach(categoriaId => {
+    const existentesPorNombre = new Map((actual[categoriaId] || []).map(item => [normalizarClaveInventario(item.nombre || ''), item]));
+    const usados = new Set();
+    (baseNueva[categoriaId] || []).forEach(baseItem => {
+      const clave = normalizarClaveInventario(baseItem.nombre || '');
+      const previo = existentesPorNombre.get(clave);
+      if (previo) usados.add(clave);
+      fusionado[categoriaId].push({
+        ...baseItem,
+        id: previo?.id || baseItem.id || generarIdProductoCatalogo(categoriaId),
+        descripcion: previo?.descripcion || '',
+        imgData: previo?.imgData || previo?.imagenData || previo?.imagen || previo?.img || '',
+        imageUrl: previo?.imageUrl || previo?.urlImagen || '',
+        activo: previo?.activo === false ? false : true,
+        actualizadoEn: previo?.actualizadoEn || new Date().toISOString()
+      });
+    });
+
+    (actual[categoriaId] || []).forEach(item => {
+      const clave = normalizarClaveInventario(item.nombre || '');
+      if (!clave || usados.has(clave)) return;
+      fusionado[categoriaId].push(item);
+    });
+  });
+
+  catalogoBaseProductos = baseNueva;
+  catalogoProductos = normalizarCatalogoProductos(fusionado);
+  guardarCatalogoProductosLocal();
+  renderizarCatalogoProductosUI();
+  renderizarEditorCatalogo();
+  marcarCatalogoEditorPendiente('Productos sincronizados desde Nueva venta. Revisa y publica el menú digital.');
 }
 
 function validarCatalogoProductos() {
@@ -2328,7 +2519,8 @@ async function guardarCatalogoDesdeEditor() {
     mensajeFinal = 'Catálogo guardado en este equipo. Firebase no estaba disponible para compartirlo.';
   }
 
-  cerrarEditorCatalogo();
+  catalogoEditorCambiosPendientes = false;
+  renderizarEditorCatalogo();
   alert(mensajeFinal);
 }
 
@@ -7429,15 +7621,8 @@ window.addEventListener('DOMContentLoaded', () => {
   cargarCatalogoProductos();
   aplicarPermisosPorRol();
 
-  const modalEditor = document.getElementById('modalEditorCatalogo');
-  if (modalEditor) {
-    modalEditor.addEventListener('click', (event) => {
-      if (event.target === modalEditor) cerrarEditorCatalogo();
-    });
-  }
-
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !document.getElementById('modalEditorCatalogo')?.classList.contains('hidden')) {
+    if (event.key === 'Escape' && !document.getElementById('seccionEditorCatalogo')?.classList.contains('hidden')) {
       cerrarEditorCatalogo();
     }
   });
