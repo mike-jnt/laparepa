@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-cocina="off">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -38,6 +38,17 @@
       white-space: nowrap;
     }
   }
+
+
+/* Cocina desactivada: se conserva el código para reconexión futura, pero no se muestra ni participa en la operación actual. */
+html[data-cocina="off"] #cocinaVistaPremium,
+html[data-cocina="off"] #lpHeaderCocina,
+html[data-cocina="off"] [onclick*="mostrarCocinaPremium"],
+html[data-cocina="off"] [onclick*="imprimirUltimaCocinero"],
+html[data-cocina="off"] [onclick*="imprimirVentaCocina"]{
+  display:none !important;
+}
+
 </style>
 
 
@@ -599,6 +610,27 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+  window.LP_COCINA_ACTIVA = false; // Cambiar a true cuando se quiera reconectar la sección de cocina.
+  window.LP_OCULTAR_COCINA_HEADER = function(){
+    if (window.LP_COCINA_ACTIVA !== false) return;
+    document.querySelectorAll('#lpHeaderCocina, [onclick*="mostrarCocinaPremium"], [onclick*="imprimirUltimaCocinero"], [onclick*="imprimirVentaCocina"]').forEach(function(el){
+      el.style.display = 'none';
+      el.setAttribute('aria-hidden', 'true');
+    });
+  };
+</script>
+
+<style id="la-parepa-sin-combos-visibles-css">
+  #productos button[onclick*="COMBO"],
+  #lpProductTools button[onclick*="lpAgregarCombo"],
+  #lpProductTools button[data-combo],
+  .lp-combo-visible {
+    display: none !important;
+  }
+</style>
+
 </head>
 
 <body class="bg-yellow-50 font-sans">
@@ -734,7 +766,6 @@
         <div class="pt-4 space-y-1">
           <button type="button" onclick="guardarVenta(); cerrarMobileMenu();" class="menu-link-text">💾 Guardar venta</button>
           <button type="button" onclick="cancelarPedidoActual(); cerrarMobileMenu();" data-role="admin-only" class="menu-link-text admin">↩️ Quitar último agregado</button>
-          <button type="button" onclick="imprimirUltimaCocinero(); cerrarMobileMenu();" class="menu-link-text">🖨️ Imprimir para cocina</button>
           <button type="button" onclick="imprimirUltimaCliente(); cerrarMobileMenu();" class="menu-link-text">🧾 Imprimir recibo cliente</button>
           <button type="button" onclick="abrirCajaVista(); cerrarMobileMenu();" class="menu-link-text">💵 Cierre del día</button>
           <button type="button" onclick="cerrarMobileMenu(); mostrarModuloIndependiente('Finanzas');" data-role="finanzas-only" class="menu-link-text admin">📋 Finanzas</button>
@@ -762,8 +793,7 @@
     </button>
     <button type="button" onclick="guardarVenta()" class="bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-3 rounded-xl whitespace-nowrap">💾 Guardar</button>
   </div>
-  <div class="grid grid-cols-3 gap-2">
-    <button type="button" onclick="imprimirUltimaCocinero()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-xl">🖨️ Cocina</button>
+  <div class="grid grid-cols-2 gap-2">
     <button type="button" onclick="imprimirUltimaCliente()" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 rounded-xl">🧾 Cliente</button>
     <button type="button" onclick="cancelarPedidoActual()" data-role="admin-only" class="bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-3 rounded-xl">↩️ Último</button>
   </div>
@@ -840,10 +870,6 @@
             <button onclick="agregarProducto('AREPA SOLO CARNE', 15000)" class="bg-yellow-300 hover:bg-yellow-400 p-3 rounded-xl shadow-sm">⚪ SOLO CARNE - $15.000</button>
             <button onclick="agregarProducto('AREPA MEXICANA', 15000)" class="bg-yellow-300 hover:bg-yellow-400 p-3 rounded-xl shadow-sm">⚪ MEXICANA - $15.000</button>
             <button onclick="agregarProducto('AREPA SOLA', 1000)" class="bg-yellow-300 hover:bg-yellow-400 p-3 rounded-xl shadow-sm">⚪ AREPA SOLA - $1.000</button>
-            <button onclick="agregarProducto('COMBO 1', 40000)" class="bg-yellow-300 hover:bg-yellow-400 p-3 rounded-xl shadow-sm">⚪ COMBO 1 - $40.000</button>
-            <button onclick="agregarProducto('COMBO 2', 30000)" class="bg-yellow-300 hover:bg-yellow-400 p-3 rounded-xl shadow-sm">⚪ COMBO 2 - $30.000</button>
-            <button onclick="agregarProducto('COMBO 3', 30000)" class="bg-yellow-300 hover:bg-yellow-400 p-3 rounded-xl shadow-sm">⚪ COMBO 3 - $30.000</button>
-            <button onclick="agregarProducto('COMBO DESVARE', 50000)" class="bg-yellow-300 hover:bg-yellow-400 p-3 rounded-xl shadow-sm">⚪ COMBO DESVARE - $50.000</button>
           </div>
         </div>
 
@@ -1012,7 +1038,6 @@
         <button type="button" onclick="anteriorPasoVenta()" class="md:hidden bg-gray-200 hover:bg-gray-300 text-gray-800 p-3 rounded-xl font-semibold">← Volver</button>
         <button type="button" onclick="cancelarPedidoActual()" data-role="admin-only" class="bg-red-100 hover:bg-red-200 text-red-700 p-3 rounded-xl font-semibold">↩️ Quitar último agregado</button>
         <button onclick="guardarVenta()" class="hidden md:inline-flex bg-green-500 hover:bg-green-600 text-white p-3 rounded-xl font-semibold">💾 Guardar Venta</button>
-        <button onclick="imprimirUltimaCocinero()" class="hidden md:inline-flex bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-xl font-semibold">🖨️ Imprimir para Cocina</button>
         <button onclick="imprimirUltimaCliente()" class="hidden md:inline-flex bg-purple-500 hover:bg-purple-600 text-white p-3 rounded-xl font-semibold">🧾 Imprimir Recibo Cliente</button>
        <button id="btnExportarExcel" onclick="exportarVentasExcelConEstilo()" data-role="gestion-only" class="hidden md:inline-flex bg-green-600 hover:bg-green-700 text-white p-3 rounded-xl font-semibold">
         📊 Exportar Ventas a Excel
@@ -2082,6 +2107,7 @@ function renderizarCatalogoProductosUI() {
   Object.keys(DEFINICIONES_CATALOGO).forEach(renderizarCategoriaCatalogo);
   actualizarProductosBebidaInventarioDesdeCatalogo();
   actualizarAlertasStockBebidas();
+  if (typeof window.lpRenderFavoritosRealesLaParepa === 'function') window.lpRenderFavoritosRealesLaParepa();
   if (!document.getElementById('menuDigitalVista')?.classList.contains('hidden')) {
     renderizarEditorCatalogo();
   }
@@ -5189,7 +5215,8 @@ function cancelarPedidoActual() {
     };
 
     const esVentaNueva = !ventaDocIdEnEdicion;
-    const popupImpresionCocina = esVentaNueva
+    const cocinaActivaParaImpresion = window.LP_COCINA_ACTIVA !== false;
+    const popupImpresionCocina = (cocinaActivaParaImpresion && esVentaNueva)
       ? window.open('', '_blank', 'width=420,height=720')
       : null;
 
@@ -5218,10 +5245,12 @@ function cancelarPedidoActual() {
         guardarReferenciaUltimaVenta(ventaLocal);
         limpiarContextoEdicionVenta();
         alert(firestoreDisponible ? "Venta guardada al instante. Se está sincronizando con la base de datos." : "Venta guardada exitosamente.");
-        if (popupImpresionCocina) {
-          imprimirComandaVenta(ventaLocal, popupImpresionCocina);
-        } else {
-          setTimeout(() => imprimirComandaVenta(ventaLocal), 80);
+        if (cocinaActivaParaImpresion) {
+          if (popupImpresionCocina) {
+            imprimirComandaVenta(ventaLocal, popupImpresionCocina);
+          } else {
+            setTimeout(() => imprimirComandaVenta(ventaLocal), 80);
+          }
         }
       } else {
         if (firestoreDisponible) {
@@ -5619,14 +5648,15 @@ function cancelarPedidoActual() {
           <p class="text-[11px] uppercase tracking-wide text-yellow-700 font-black">QR del catálogo</p>
           <h4 class="font-black text-gray-900 text-xl mt-1">${escaparHTML(etiquetaMesa)}</h4>
           <p class="text-xs text-gray-600 mt-1">Este QR pertenece a <b>${escaparHTML(etiquetaMesa)}</b>.</p>
-          <img src="${qr}" alt="QR ${escaparHTML(etiquetaMesa)}" class="mx-auto my-3 w-44 h-44" />
+          <img src="${escaparHTML(qr)}" alt="QR ${escaparHTML(etiquetaMesa)}" class="mx-auto my-3 w-44 h-44" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'; const n=this.nextElementSibling; if(n) n.style.display='block';" />
+          <p style="display:none" class="text-[10px] text-red-600 font-bold my-2">No se pudo cargar la imagen del QR. Usa el botón de abrir QR o revisa la conexión.</p>
           <div class="text-left bg-gray-50 border border-gray-100 rounded-xl p-2">
             <p class="text-[10px] font-semibold text-gray-500">Información enviada al catálogo:</p>
             <p class="text-[10px] text-gray-600">tipo=mesa · origen=qr_mesa · mesa=${escaparHTML(mesa)}</p>
           </div>
           <p class="text-[10px] text-gray-500 break-all mt-2">${escaparHTML(url)}</p>
           <div class="flex flex-col gap-2 mt-3">
-            <a href="${qr}" target="_blank" rel="noopener" class="bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl px-3 py-2 text-xs font-bold">Abrir / descargar QR</a>
+            <a href="${escaparHTML(qr)}" target="_blank" rel="noopener" class="bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl px-3 py-2 text-xs font-bold">Abrir / descargar QR</a>
             <a href="${escaparHTML(url)}" target="_blank" rel="noopener" class="bg-gray-900 hover:bg-black text-white rounded-xl px-3 py-2 text-xs font-bold">Probar catálogo</a>
           </div>
         </div>
@@ -6378,6 +6408,8 @@ function abrirVentanaImpresion(contenido, titulo = 'Impresión', ventanaDestino 
 }
 
 function imprimirComandaVenta(venta, ventanaDestino = null) {
+  if (window.LP_COCINA_ACTIVA === false) { return; }
+
   if (!venta) return null;
   if (esVentaCancelada(venta)) return null;
   if (!Array.isArray(venta.pedido) || !venta.pedido.length) return null;
@@ -6566,6 +6598,8 @@ function generarPlantillaComanda(venta = {}, referencia = 1) {
 }
 
 function imprimirUltimaCocinero() {
+  if (window.LP_COCINA_ACTIVA === false) { return; }
+
   if (!verificarAcceso(["admin", "cajero"])) return;
   const ultimaVenta = obtenerUltimaVentaGuardada();
   if (!ultimaVenta) {
@@ -6620,6 +6654,8 @@ function imprimirVentaCliente(index) {
 }
 
 function imprimirVentaCocina(index) {
+  if (window.LP_COCINA_ACTIVA === false) { return; }
+
   if (!verificarAcceso(["admin", "cajero"])) return;
   const ventas = obtenerVentasStorage();
   const venta = ventas[index];
@@ -8318,7 +8354,7 @@ function mostrarModuloIndependiente(nombreModulo) {
     const combos = {
       parepaBebida: [["AREPA LA PAREPA", 14000], ["COCA COLA 400 ml", 4000]],
       paisaBebida: [["AREPA PAISA", 17000], ["COCA COLA 400 ml", 4000]],
-      familiar: [["COMBO DESVARE", 50000], ["COCA COLA 1.5L", 9000]],
+      familiar: [["AREPA MEGAPAISA", 22000], ["AREPA LA PAREPA", 14000], ["AREPA MIXTA", 14000], ["COCA COLA 1.5L", 9000]],
       rapido: [["AREPA MIXTA", 14000], ["QUATRO", 4000]]
     };
     (combos[tipo] || []).forEach(item => window.lpAgregarProductoCatalogo(item[0], item[1]));
@@ -8340,11 +8376,10 @@ function mostrarModuloIndependiente(nombreModulo) {
             <div>
               <p class="text-white/80 text-xs font-black tracking-[.22em] uppercase">Panel operativo premium</p>
               <h2 class="mt-2 text-3xl md:text-5xl font-black tracking-tight">LA PAREPA</h2>
-              <p class="mt-2 max-w-2xl text-white/82">Control rápido de ventas, caja, cocina, domicilios, respaldo local y reportes del negocio desde una sola pantalla.</p>
+              <p class="mt-2 max-w-2xl text-white/82">Control rápido de ventas, caja, domicilios, respaldo local y reportes del negocio desde una sola pantalla.</p>
             </div>
             <div class="grid sm:grid-cols-2 gap-2">
               <button type="button" onclick="mostrarPOSPremium()" class="lp-action-btn lp-action-primary">➕ Nueva venta</button>
-              <button type="button" onclick="mostrarCocinaPremium()" class="lp-action-btn lp-action-secondary">👨‍🍳 Vista cocina</button>
               <button type="button" onclick="abrirCajaVista()" class="lp-action-btn lp-action-secondary">💵 Caja</button>
               <button type="button" onclick="exportarRespaldoLaParepa()" class="lp-action-btn lp-action-secondary">💾 Respaldo</button>
             </div>
@@ -8354,30 +8389,53 @@ function mostrarModuloIndependiente(nombreModulo) {
         <section class="grid sm:grid-cols-2 lg:grid-cols-6 gap-3">
           <article class="lp-metric-card"><p class="lp-metric-label">Ventas hoy</p><p id="lpMetricTotalDia" class="lp-metric-value">$0</p></article>
           <article class="lp-metric-card"><p class="lp-metric-label">Pedidos</p><p id="lpMetricPedidos" class="lp-metric-value">0</p></article>
-          <article class="lp-metric-card"><p class="lp-metric-label">Pendientes</p><p id="lpMetricPendientes" class="lp-metric-value">0</p></article>
+          <article class="lp-metric-card"><p class="lp-metric-label">Domicilios</p><p id="lpMetricPendientes" class="lp-metric-value">0</p></article>
           <article class="lp-metric-card"><p class="lp-metric-label">Ticket prom.</p><p id="lpMetricPromedio" class="lp-metric-value">$0</p></article>
           <article class="lp-metric-card"><p class="lp-metric-label">Top producto</p><p id="lpMetricTopProducto" class="lp-metric-value text-base leading-tight">Sin ventas</p></article>
           <article class="lp-metric-card"><p class="lp-metric-label">Caja</p><p id="lpMetricCaja" class="lp-metric-value text-base">Local</p></article>
         </section>
 
         <section class="grid xl:grid-cols-[1.25fr_.75fr] gap-4">
-          <div class="lp-premium-card p-4 md:p-5">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+          <div class="lp-premium-card p-4 md:p-5 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
-                <p class="text-xs uppercase tracking-wide text-red-700 font-black">Pedidos activos</p>
-                <h3 class="lp-section-title">Operación de hoy</h3>
+                <p class="text-xs uppercase tracking-wide text-red-700 font-black">Inicio del sistema</p>
+                <h3 class="lp-section-title">Acciones rápidas</h3>
+                <p class="text-sm text-gray-500 mt-1">Desde aquí puedes crear ventas, revisar caja, consultar domicilios y generar reportes sin depender de Cocina.</p>
               </div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" onclick="mostrarCocinaPremium()" class="lp-mini-btn bg-red-700 hover:bg-red-800 text-white">Abrir cocina</button>
-                <button type="button" onclick="imprimirReporteDiarioLaParepa()" class="lp-mini-btn bg-amber-100 hover:bg-amber-200 text-amber-900">Imprimir reporte</button>
-                <button type="button" onclick="exportarReporteExcelLaParepa()" class="lp-mini-btn bg-green-100 hover:bg-green-200 text-green-900">Excel</button>
+                <button type="button" onclick="mostrarPOSPremium()" class="lp-mini-btn bg-red-700 hover:bg-red-800 text-white">➕ Nueva venta</button>
+                <button type="button" onclick="abrirCajaVista()" class="lp-mini-btn bg-amber-100 hover:bg-amber-200 text-amber-900">💵 Caja</button>
+                <button type="button" onclick="abrirDomiciliosVista()" class="lp-mini-btn bg-red-50 hover:bg-red-100 text-red-700">🛵 Domicilios</button>
               </div>
             </div>
-            <div class="lp-table-scroll">
-              <table class="lp-table-premium">
-                <thead><tr><th>Pedido</th><th>Cliente</th><th>Tipo</th><th>Total</th><th>Estado</th><th>Acción</th></tr></thead>
-                <tbody id="lpPedidosActivosBody"></tbody>
-              </table>
+            <div class="grid sm:grid-cols-3 gap-3">
+              <button type="button" onclick="imprimirReporteDiarioLaParepa()" class="lp-action-btn bg-amber-100 hover:bg-amber-200 text-amber-900">🧾 Imprimir reporte</button>
+              <button type="button" onclick="exportarReporteExcelLaParepa()" class="lp-action-btn bg-green-700 text-white hover:bg-green-800">📊 Exportar Excel</button>
+              <button type="button" onclick="exportarRespaldoLaParepa()" class="lp-action-btn bg-red-700 text-white hover:bg-red-800">💾 Respaldo</button>
+            </div>
+            <div class="lp-premium-soft p-4 text-sm text-gray-700">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="text-xs font-black text-red-700 uppercase tracking-wide">Ruta recomendada del turno</p>
+                  <p class="mt-1 font-black text-gray-900">Control operativo sin Cocina</p>
+                </div>
+                <span class="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-black text-green-800">POS activo</span>
+              </div>
+              <div class="mt-4 grid md:grid-cols-3 gap-3">
+                <div class="rounded-xl border border-red-100 bg-white p-3">
+                  <p class="font-black text-red-700">1. Vender</p>
+                  <p class="mt-1 text-xs text-gray-500">Registra ventas o carga pedidos recibidos desde el catálogo.</p>
+                </div>
+                <div class="rounded-xl border border-amber-100 bg-white p-3">
+                  <p class="font-black text-amber-800">2. Revisar caja</p>
+                  <p class="mt-1 text-xs text-gray-500">Controla efectivo, transferencias y domicilios durante el turno.</p>
+                </div>
+                <div class="rounded-xl border border-green-100 bg-white p-3">
+                  <p class="font-black text-green-800">3. Cerrar seguro</p>
+                  <p class="mt-1 text-xs text-gray-500">Imprime reporte y guarda respaldo al finalizar el día.</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -8433,27 +8491,111 @@ function mostrarModuloIndependiente(nombreModulo) {
       </div>
     `;
 
-    nav.insertAdjacentElement("afterend", cocina);
+    if (window.LP_COCINA_ACTIVA !== false) nav.insertAdjacentElement("afterend", cocina);
     nav.insertAdjacentElement("afterend", dashboard);
   }
 
   function createHeaderButtons() {
     const actions = document.querySelector("#topNav .desktop-header-actions");
     if (actions && !document.getElementById("lpHeaderInicio")) {
+      const cocinaHeaderBtn = window.LP_COCINA_ACTIVA !== false
+        ? `<button id="lpHeaderCocina" type="button" onclick="mostrarCocinaPremium()" class="lp-header-extra-btn font-semibold rounded-lg shadow transition text-center">👨‍🍳 Cocina</button>`
+        : ``;
       actions.insertAdjacentHTML("afterbegin", `
         <button id="lpHeaderInicio" type="button" onclick="mostrarDashboardPremium()" class="lp-header-extra-btn font-semibold rounded-lg shadow transition text-center">🏠 Inicio</button>
-        <button id="lpHeaderCocina" type="button" onclick="mostrarCocinaPremium()" class="lp-header-extra-btn font-semibold rounded-lg shadow transition text-center">👨‍🍳 Cocina</button>
+        ${cocinaHeaderBtn}
       `);
     }
     const mobileMenu = document.querySelector("#mobileHeaderMenu .space-y-2");
     if (mobileMenu && !document.getElementById("lpMobileInicio")) {
+      const cocinaMobileBtn = window.LP_COCINA_ACTIVA !== false
+        ? `<button type="button" onclick="cerrarMobileMenu(); mostrarCocinaPremium();" class="menu-link-text">👨‍🍳 Cocina</button>`
+        : ``;
       mobileMenu.insertAdjacentHTML("afterbegin", `
         <button id="lpMobileInicio" type="button" onclick="cerrarMobileMenu(); mostrarDashboardPremium();" class="menu-link-text">🏠 Inicio</button>
-        <button type="button" onclick="cerrarMobileMenu(); mostrarCocinaPremium();" class="menu-link-text">👨‍🍳 Cocina</button>
+        ${cocinaMobileBtn}
         <button type="button" onclick="cerrarMobileMenu(); exportarRespaldoLaParepa();" class="menu-link-text">💾 Exportar respaldo</button>
       `);
     }
   }
+
+  function lpNormalizarNombreFavorito(nombre) {
+    return String(nombre || "").trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  function lpObtenerProductosRealesFavoritos(max = 4) {
+    const salida = [];
+    const vistos = new Set();
+
+    function agregarProductoReal(producto, categoria) {
+      const nombre = String(producto?.nombre || producto?.name || "").trim();
+      const precio = Number(producto?.precio ?? producto?.price ?? 0) || 0;
+      if (!nombre || !precio) return;
+      if (/\bcombo\b/i.test(nombre)) return;
+      const clave = lpNormalizarNombreFavorito(nombre);
+      if (vistos.has(clave)) return;
+      vistos.add(clave);
+      salida.push({ nombre, precio, categoria: categoria || "producto", icono: producto?.icono || "" });
+    }
+
+    try {
+      const cats = (typeof catalogoProductos === "object" && catalogoProductos) ? catalogoProductos : {};
+      ["comida", "bebidas", "adiciones"].forEach(categoria => {
+        (Array.isArray(cats[categoria]) ? cats[categoria] : []).forEach(producto => agregarProductoReal(producto, categoria));
+      });
+    } catch (_) {}
+
+    if (salida.length < max) {
+      try {
+        document.querySelectorAll("#productos button").forEach(btn => {
+          const nombre = btn.dataset.productName || btn.dataset.nombre || String(btn.textContent || "").replace(/[-–—]\s*\$.*$/g, "").replace(/^[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ]+/u, "").trim();
+          const precioRaw = btn.dataset.productPrice || btn.dataset.precio || String(btn.textContent || "");
+          const precioMatch = String(precioRaw).match(/\$?\s*([0-9.]+)/);
+          const precio = precioMatch ? Number(precioMatch[1].replace(/\./g, "")) : 0;
+          agregarProductoReal({ nombre, precio }, "producto");
+        });
+      } catch (_) {}
+    }
+
+    return salida.slice(0, max);
+  }
+
+  function lpEtiquetaFavoritoProducto(producto) {
+    const nombre = String(producto?.nombre || "Producto").trim();
+    const categoria = String(producto?.categoria || "").toLowerCase();
+    const icono = producto?.icono || (categoria.includes("bebida") ? "🥤" : categoria.includes("adicion") ? "➕" : "⭐");
+    const corto = nombre.length > 20 ? nombre.slice(0, 19).trim() + "…" : nombre;
+    return `${icono} ${corto}`;
+  }
+
+  window.lpRenderFavoritosRealesLaParepa = function() {
+    const cont = document.getElementById("lpFavoritosReales");
+    if (!cont) return;
+    const productos = lpObtenerProductosRealesFavoritos(4);
+    cont.innerHTML = "";
+
+    if (!productos.length) {
+      cont.innerHTML = `<div class="text-xs text-gray-500 bg-white border border-red-100 rounded-2xl px-3 py-2 sm:col-span-2 xl:col-span-4">Cuando cargues productos en ventas, aquí aparecerán accesos rápidos reales.</div>`;
+      return;
+    }
+
+    productos.forEach(producto => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "lp-mini-btn bg-red-700 hover:bg-red-800 text-white";
+      btn.dataset.productName = producto.nombre;
+      btn.dataset.productPrice = String(producto.precio || 0);
+      btn.textContent = lpEtiquetaFavoritoProducto(producto);
+      btn.addEventListener("click", () => {
+        if (typeof window.lpAgregarProductoCatalogo === "function") {
+          window.lpAgregarProductoCatalogo(producto.nombre, producto.precio);
+        } else if (typeof agregarProducto === "function") {
+          agregarProducto(producto.nombre, producto.precio);
+        }
+      });
+      cont.appendChild(btn);
+    });
+  };
 
   function createProductTools() {
     const productos = document.getElementById("productos");
@@ -8466,7 +8608,7 @@ function mostrarModuloIndependiente(nombreModulo) {
       <div class="grid lg:grid-cols-[1fr_auto] gap-3 items-center">
         <div>
           <p class="text-xs uppercase tracking-wide text-red-700 font-black">Venta rápida</p>
-          <h3 class="text-xl font-black text-gray-800">Productos, favoritos y combos</h3>
+          <h3 class="text-xl font-black text-gray-800">Productos y favoritos</h3>
         </div>
         <div class="flex flex-wrap gap-2">
           <button type="button" onclick="repetirUltimoPedidoLaParepa()" class="lp-mini-btn bg-amber-100 hover:bg-amber-200 text-amber-900">🔁 Repetir último pedido</button>
@@ -8475,21 +8617,11 @@ function mostrarModuloIndependiente(nombreModulo) {
       </div>
       <div class="mt-4 grid lg:grid-cols-[1fr_1fr] gap-3">
         <input id="lpBusquedaProductos" type="text" placeholder="🔎 Buscar producto, bebida o adición..." class="w-full p-3 border border-red-100 rounded-2xl bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-200" oninput="filtrarProductosLaParepa()" />
-        <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-2">
-          <button type="button" onclick="lpAgregarProductoCatalogo('AREPA LA PAREPA', 14000)" class="lp-mini-btn bg-red-700 hover:bg-red-800 text-white">⭐ La Parepa</button>
-          <button type="button" onclick="lpAgregarProductoCatalogo('AREPA PAISA', 17000)" class="lp-mini-btn bg-red-700 hover:bg-red-800 text-white">⭐ Paisa</button>
-          <button type="button" onclick="lpAgregarProductoCatalogo('AREPA MIXTA', 14000)" class="lp-mini-btn bg-red-700 hover:bg-red-800 text-white">⭐ Mixta</button>
-          <button type="button" onclick="lpAgregarProductoCatalogo('COCA COLA 400 ml', 4000)" class="lp-mini-btn bg-red-700 hover:bg-red-800 text-white">🥤 Coca-Cola</button>
-        </div>
-      </div>
-      <div class="mt-3 grid sm:grid-cols-2 xl:grid-cols-4 gap-2">
-        <button type="button" onclick="lpAgregarCombo('parepaBebida')" class="lp-mini-btn bg-amber-100 hover:bg-amber-200 text-amber-950">Combo Parepa + bebida</button>
-        <button type="button" onclick="lpAgregarCombo('paisaBebida')" class="lp-mini-btn bg-amber-100 hover:bg-amber-200 text-amber-950">Combo Paisa + bebida</button>
-        <button type="button" onclick="lpAgregarCombo('rapido')" class="lp-mini-btn bg-amber-100 hover:bg-amber-200 text-amber-950">Combo rápido</button>
-        <button type="button" onclick="lpAgregarCombo('familiar')" class="lp-mini-btn bg-amber-100 hover:bg-amber-200 text-amber-950">Combo familiar</button>
+        <div id="lpFavoritosReales" class="grid sm:grid-cols-2 xl:grid-cols-4 gap-2"></div>
       </div>
     `;
     productos.parentElement.insertBefore(tools, productos);
+    if (typeof window.lpRenderFavoritosRealesLaParepa === "function") window.lpRenderFavoritosRealesLaParepa();
   }
 
   function createCajaReportButtons() {
@@ -8534,6 +8666,10 @@ function mostrarModuloIndependiente(nombreModulo) {
   };
 
   window.mostrarCocinaPremium = function() {
+    if (window.LP_COCINA_ACTIVA === false) {
+      if (typeof mostrarDashboardPremium === "function") mostrarDashboardPremium();
+      return;
+    }
     createPremiumViews();
     hideAllViews();
     const c = document.getElementById("cocinaVistaPremium");
@@ -8546,14 +8682,14 @@ function mostrarModuloIndependiente(nombreModulo) {
     const ventas = ventasHoy();
     const activas = ventas.filter(v => !isCancelada(v));
     const total = activas.reduce((acc, v) => acc + amountVenta(v), 0);
-    const pendientes = activas.filter(v => !["Listo", "Entregado"].includes(getEstadoPedido(v))).length;
+    const domiciliosHoy = activas.filter(v => String(v.tipoPedido || "").toLowerCase().includes("domicilio")).length;
     const top = productoMasVendido(activas);
     const promedio = activas.length ? total / activas.length : 0;
 
     const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
     set("lpMetricTotalDia", money(total));
     set("lpMetricPedidos", String(activas.length));
-    set("lpMetricPendientes", String(pendientes));
+    set("lpMetricPendientes", String(domiciliosHoy));
     set("lpMetricPromedio", money(promedio));
     set("lpMetricTopProducto", top.cantidad ? `${top.nombre} (${top.cantidad})` : "Sin ventas");
 
@@ -8569,26 +8705,6 @@ function mostrarModuloIndependiente(nombreModulo) {
     })();
     set("lpMetricCaja", cajaText);
 
-    const body = document.getElementById("lpPedidosActivosBody");
-    if (body) {
-      const rows = activas
-        .filter(v => getEstadoPedido(v) !== "Entregado")
-        .slice(0, 8)
-        .map((v, i) => {
-          const key = getVentaKey(v, i);
-          return `
-            <tr>
-              <td>#${v.comanda || v.recibo || "-"}</td>
-              <td>${v.cliente || "N/A"}</td>
-              <td>${v.tipoPedido || "-"}</td>
-              <td class="font-black">${money(amountVenta(v))}</td>
-              <td>${badgeEstado(getEstadoPedido(v))}</td>
-              <td><button type="button" onclick="mostrarCocinaPremium()" class="lp-mini-btn bg-red-50 hover:bg-red-100 text-red-700">Ver</button></td>
-            </tr>
-          `;
-        }).join("");
-      body.innerHTML = rows || `<tr><td colspan="6" class="text-center text-gray-400">No hay pedidos activos hoy.</td></tr>`;
-    }
   };
 
   window.actualizarCocinaLaParepa = function() {
@@ -8999,6 +9115,7 @@ function mostrarModuloIndependiente(nombreModulo) {
         setTimeout(() => {
           createPremiumViews();
           createHeaderButtons();
+    if (typeof window.LP_OCULTAR_COCINA_HEADER === "function") window.LP_OCULTAR_COCINA_HEADER();
           createProductTools();
           createCajaReportButtons();
           enhanceProductButtons();
@@ -9078,6 +9195,7 @@ function mostrarModuloIndependiente(nombreModulo) {
   document.addEventListener("DOMContentLoaded", () => {
     createPremiumViews();
     createHeaderButtons();
+    if (typeof window.LP_OCULTAR_COCINA_HEADER === "function") window.LP_OCULTAR_COCINA_HEADER();
     createProductTools();
     createCajaReportButtons();
     patchGlobalFunctions();
@@ -9683,7 +9801,7 @@ function mostrarModuloIndependiente(nombreModulo) {
   const COMBOS_LA_PAREPA = {
     parepaBebida: [["AREPA LA PAREPA", 14000], ["COCA COLA 400 ml", 4000]],
     paisaBebida: [["AREPA PAISA", 17000], ["COCA COLA 400 ml", 4000]],
-    familiar: [["COMBO DESVARE", 50000], ["COCA COLA 1.5L", 9000]],
+    familiar: [["AREPA MEGAPAISA", 22000], ["AREPA LA PAREPA", 14000], ["AREPA MIXTA", 14000], ["COCA COLA 1.5L", 9000]],
     rapido: [["AREPA MIXTA", 14000], ["QUATRO", 4000]]
   };
 
