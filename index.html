@@ -14,7 +14,7 @@
   html { scroll-behavior: smooth; }
   @media (max-width: 767px) {
     body { padding-bottom: 120px; }
-    #appMain, #historicosVista, #domiciliosVista { padding: 1rem; }
+    #appMain, #historicosVista, #domiciliosVista, #menuDigitalVista { padding: 1rem; }
     #productos > div { border-radius: 1rem; }
     #productos button {
       min-height: 72px;
@@ -33,7 +33,8 @@
     #historicosVista table th,
     #historicosVista table td,
     #domiciliosVista table th,
-    #domiciliosVista table td {
+    #domiciliosVista table td,
+    #menuDigitalVista table td {
       white-space: nowrap;
     }
   }
@@ -234,7 +235,8 @@
   #appMain,
   #cajaVista,
   #historicosVista,
-  #domiciliosVista {
+  #domiciliosVista,
+  #menuDigitalVista {
     padding: 0.85rem !important;
   }
 
@@ -242,7 +244,8 @@
     #appMain,
     #cajaVista,
     #historicosVista,
-    #domiciliosVista {
+    #domiciliosVista,
+  #menuDigitalVista {
       padding: 1rem !important;
     }
   }
@@ -250,7 +253,8 @@
   #appMain > div,
   #cajaVista > div,
   #historicosVista > div,
-  #domiciliosVista > div {
+  #domiciliosVista > div,
+  #menuDigitalVista > div {
     max-width: 1320px;
     margin-left: auto;
     margin-right: auto;
@@ -259,21 +263,24 @@
   #appMain .bg-white,
   #cajaVista .bg-white,
   #historicosVista .bg-white,
-  #domiciliosVista .bg-white {
+  #domiciliosVista .bg-white,
+  #menuDigitalVista .bg-white {
     border-radius: 1rem !important;
   }
 
   #appMain .bg-white[class*="p-"],
   #cajaVista .bg-white[class*="p-"],
   #historicosVista .bg-white[class*="p-"],
-  #domiciliosVista .bg-white[class*="p-"] {
+  #domiciliosVista .bg-white[class*="p-"],
+  #menuDigitalVista .bg-white[class*="p-"] {
     padding: 0.95rem !important;
   }
 
   #appMain h2,
   #cajaVista h2,
   #historicosVista h2,
-  #domiciliosVista h2 {
+  #domiciliosVista h2,
+  #menuDigitalVista h2 {
     font-size: clamp(1.25rem, 0.9vw + 1rem, 1.7rem) !important;
     line-height: 1.15 !important;
   }
@@ -282,31 +289,36 @@
   #cajaVista h3,
   #historicosVista h3,
   #domiciliosVista h3,
+  #menuDigitalVista h3,
   #appMain h4,
   #cajaVista h4,
   #historicosVista h4,
-  #domiciliosVista h4 {
+  #domiciliosVista h4,
+  #menuDigitalVista h4 {
     line-height: 1.2 !important;
   }
 
   #appMain .text-2xl,
   #cajaVista .text-2xl,
   #historicosVista .text-2xl,
-  #domiciliosVista .text-2xl {
+  #domiciliosVista .text-2xl,
+  #menuDigitalVista .text-2xl {
     font-size: 1.35rem !important;
   }
 
   #appMain .text-xl,
   #cajaVista .text-xl,
   #historicosVista .text-xl,
-  #domiciliosVista .text-xl {
+  #domiciliosVista .text-xl,
+  #menuDigitalVista .text-xl {
     font-size: 1.08rem !important;
   }
 
   #appMain .text-lg,
   #cajaVista .text-lg,
   #historicosVista .text-lg,
-  #domiciliosVista .text-lg {
+  #domiciliosVista .text-lg,
+  #menuDigitalVista .text-lg {
     font-size: 0.98rem !important;
   }
 
@@ -363,7 +375,8 @@
   #controlCajaSeccion button,
   #ventasSeccion button,
   #historicosVista button,
-  #domiciliosVista button {
+  #domiciliosVista button,
+  #menuDigitalVista button {
     border-radius: 0.9rem !important;
   }
 
@@ -998,52 +1011,6 @@
 
 
 
-    <!-- Sección Menú digital / Catálogo cliente -->
-    <section id="seccionEditorCatalogo" data-role="gestion-only" class="hidden mt-8 bg-white rounded-3xl shadow-xl border border-yellow-100 overflow-hidden">
-      <div class="bg-gradient-to-br from-yellow-50 via-white to-orange-50 px-4 sm:px-6 py-5 border-b border-yellow-100">
-        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div>
-            <p class="text-xs uppercase tracking-wide text-yellow-700 font-black">Gestión del menú digital</p>
-            <h3 class="text-2xl font-black text-gray-900 mt-1">Productos, imágenes y precios del catálogo</h3>
-            <p class="text-sm text-gray-600 mt-2 max-w-3xl">Administra aquí lo que verá el cliente al escanear el QR de la mesa. Esta sección toma como base los productos creados en Nueva venta y permite editar nombre, descripción, precio, imagen, orden y visibilidad.</p>
-            <p id="estadoCatalogoSync" class="mt-3 inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-semibold border border-blue-100">Catálogo cargado en modo local</p>
-          </div>
-          <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 lg:justify-end">
-            <button type="button" onclick="sincronizarCatalogoDesdeProductosVenta()" class="bg-gray-900 hover:bg-black text-white px-4 py-2.5 rounded-xl font-semibold text-sm">↻ Sincronizar productos</button>
-            <button type="button" onclick="guardarCatalogoDesdeEditor()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2.5 rounded-xl font-semibold text-sm">Guardar y publicar</button>
-            <button type="button" onclick="restablecerCatalogoBase()" class="bg-white hover:bg-yellow-50 text-gray-700 px-4 py-2.5 rounded-xl font-semibold text-sm border border-yellow-200">Restablecer base</button>
-            <button type="button" onclick="cerrarEditorCatalogo()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-semibold text-sm">Ocultar sección</button>
-          </div>
-        </div>
-
-        <div id="catalogoEditorResumen" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5"></div>
-
-        <div class="mt-5 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-center">
-          <div class="relative">
-            <input id="catalogoEditorBuscador" type="search" oninput="actualizarFiltroCatalogoEditor(this.value)" placeholder="Buscar producto por nombre, descripción o precio..." class="w-full border border-yellow-200 rounded-2xl px-4 py-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300 bg-white" />
-            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-          </div>
-          <div class="flex flex-wrap gap-2 justify-start lg:justify-end">
-            <button type="button" onclick="agregarProductoEditor('comida')" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-2 rounded-xl font-semibold text-sm">+ Comida</button>
-            <button type="button" onclick="agregarProductoEditor('adiciones')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2 rounded-xl font-semibold text-sm">+ Adición</button>
-            <button type="button" onclick="agregarProductoEditor('bebidas')" class="bg-orange-100 hover:bg-orange-200 text-orange-800 px-3 py-2 rounded-xl font-semibold text-sm">+ Bebida</button>
-          </div>
-        </div>
-
-        <div id="catalogoEditorTabs" class="flex gap-2 overflow-x-auto mt-4 pb-1"></div>
-      </div>
-
-      <div id="editorCatalogoContenido" class="px-4 sm:px-6 py-5 space-y-6 bg-yellow-50/50"></div>
-
-      <div class="px-4 sm:px-6 py-4 border-t border-yellow-100 bg-white flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-        <p class="text-xs text-gray-500">Consejo: sube imágenes cuadradas o verticales. El sistema las comprime antes de guardarlas en Firestore.</p>
-        <div class="flex flex-col sm:flex-row gap-2">
-          <button type="button" onclick="sincronizarCatalogoDesdeProductosVenta()" class="px-4 py-2.5 rounded-xl bg-gray-900 hover:bg-black text-white font-semibold text-sm">↻ Sincronizar productos</button>
-          <button type="button" onclick="guardarCatalogoDesdeEditor()" class="px-4 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-white font-semibold text-sm">Guardar y publicar menú digital</button>
-        </div>
-      </div>
-    </section>
-
     <!-- Pedidos recibidos desde catálogo digital -->
     <div id="pedidosCatalogoSeccion" class="mt-8 bg-white p-4 rounded-xl shadow-md border border-yellow-100">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
@@ -1115,6 +1082,65 @@
     </div>
   </main>
 
+
+
+
+
+  <main id="menuDigitalVista" data-role="gestion-only" class="p-4 md:p-6 hidden">
+    <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div>
+        <h2 class="text-2xl font-black text-gray-800">🖼️ Menú digital</h2>
+        <p class="text-sm text-gray-500">Configura el catálogo que verán los clientes al escanear el QR de mesa.</p>
+      </div>
+      <button type="button" onclick="cerrarEditorCatalogo()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-xl font-semibold">← Volver al sistema</button>
+    </div>
+    <!-- Pantalla Menú digital / Catálogo cliente -->
+    <section id="seccionEditorCatalogo" data-role="gestion-only" class="bg-white rounded-3xl shadow-xl border border-yellow-100 overflow-hidden">
+      <div class="bg-gradient-to-br from-yellow-50 via-white to-orange-50 px-4 sm:px-6 py-5 border-b border-yellow-100">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div>
+            <p class="text-xs uppercase tracking-wide text-yellow-700 font-black">Gestión del menú digital</p>
+            <h3 class="text-2xl font-black text-gray-900 mt-1">Productos, imágenes y precios del catálogo</h3>
+            <p class="text-sm text-gray-600 mt-2 max-w-3xl">Administra aquí lo que verá el cliente al escanear el QR de la mesa. Esta sección toma como base los productos creados en Nueva venta y permite editar nombre, descripción, precio, imagen, orden y visibilidad.</p>
+            <p id="estadoCatalogoSync" class="mt-3 inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-semibold border border-blue-100">Catálogo cargado en modo local</p>
+          </div>
+          <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 lg:justify-end">
+            <button type="button" onclick="sincronizarCatalogoDesdeProductosVenta()" class="bg-gray-900 hover:bg-black text-white px-4 py-2.5 rounded-xl font-semibold text-sm">↻ Sincronizar productos</button>
+            <button type="button" onclick="guardarCatalogoDesdeEditor()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2.5 rounded-xl font-semibold text-sm">Guardar y publicar</button>
+            <button type="button" onclick="restablecerCatalogoBase()" class="bg-white hover:bg-yellow-50 text-gray-700 px-4 py-2.5 rounded-xl font-semibold text-sm border border-yellow-200">Restablecer base</button>
+            <button type="button" onclick="cerrarEditorCatalogo()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-semibold text-sm">← Volver al sistema</button>
+          </div>
+        </div>
+
+        <div id="catalogoEditorResumen" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5"></div>
+
+        <div class="mt-5 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-center">
+          <div class="relative">
+            <input id="catalogoEditorBuscador" type="search" oninput="actualizarFiltroCatalogoEditor(this.value)" placeholder="Buscar producto por nombre, descripción o precio..." class="w-full border border-yellow-200 rounded-2xl px-4 py-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300 bg-white" />
+            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+          </div>
+          <div class="flex flex-wrap gap-2 justify-start lg:justify-end">
+            <button type="button" onclick="agregarProductoEditor('comida')" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-2 rounded-xl font-semibold text-sm">+ Comida</button>
+            <button type="button" onclick="agregarProductoEditor('adiciones')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2 rounded-xl font-semibold text-sm">+ Adición</button>
+            <button type="button" onclick="agregarProductoEditor('bebidas')" class="bg-orange-100 hover:bg-orange-200 text-orange-800 px-3 py-2 rounded-xl font-semibold text-sm">+ Bebida</button>
+          </div>
+        </div>
+
+        <div id="catalogoEditorTabs" class="flex gap-2 overflow-x-auto mt-4 pb-1"></div>
+      </div>
+
+      <div id="editorCatalogoContenido" class="px-4 sm:px-6 py-5 space-y-6 bg-yellow-50/50"></div>
+
+      <div class="px-4 sm:px-6 py-4 border-t border-yellow-100 bg-white flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+        <p class="text-xs text-gray-500">Consejo: sube imágenes cuadradas o verticales. El sistema las comprime antes de guardarlas en Firestore.</p>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <button type="button" onclick="sincronizarCatalogoDesdeProductosVenta()" class="px-4 py-2.5 rounded-xl bg-gray-900 hover:bg-black text-white font-semibold text-sm">↻ Sincronizar productos</button>
+          <button type="button" onclick="guardarCatalogoDesdeEditor()" class="px-4 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-white font-semibold text-sm">Guardar y publicar menú digital</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
 
 
 
@@ -2027,7 +2053,7 @@ function renderizarCatalogoProductosUI() {
   Object.keys(DEFINICIONES_CATALOGO).forEach(renderizarCategoriaCatalogo);
   actualizarProductosBebidaInventarioDesdeCatalogo();
   actualizarAlertasStockBebidas();
-  if (!document.getElementById('seccionEditorCatalogo')?.classList.contains('hidden')) {
+  if (!document.getElementById('menuDigitalVista')?.classList.contains('hidden')) {
     renderizarEditorCatalogo();
   }
 }
@@ -2038,18 +2064,35 @@ let catalogoEditorCambiosPendientes = false;
 
 function abrirEditorCatalogo() {
   if (!verificarAcceso(['admin', 'administrador'])) return;
-  const seccion = document.getElementById('seccionEditorCatalogo');
-  if (!seccion) return;
+  const vista = document.getElementById('menuDigitalVista');
+  if (!vista) return;
+  ocultarVistasPrincipalesLaParepa();
   renderizarEditorCatalogo();
-  seccion.classList.remove('hidden');
-  seccion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  vista.classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function cerrarEditorCatalogo() {
-  const seccion = document.getElementById('seccionEditorCatalogo');
-  if (!seccion) return;
-  seccion.classList.add('hidden');
+  const vista = document.getElementById('menuDigitalVista');
+  const appMain = document.getElementById('appMain');
+  if (vista) vista.classList.add('hidden');
+  if (appMain) appMain.classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function ocultarVistasPrincipalesLaParepa() {
+  [
+    'dashboardPremium',
+    'cocinaVistaPremium',
+    'appMain',
+    'historicosVista',
+    'cajaVista',
+    'domiciliosVista',
+    'menuDigitalVista'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
 }
 
 function marcarCatalogoEditorPendiente(mensaje = 'Cambios listos. Presiona Guardar y publicar menú digital.') {
@@ -6471,9 +6514,11 @@ async function abrirHistoricos() {
   const historicosVista = document.getElementById("historicosVista");
   const cajaVista = document.getElementById("cajaVista");
   const domiciliosVista = document.getElementById("domiciliosVista");
+  const menuDigitalVista = document.getElementById("menuDigitalVista");
   if (appMain) appMain.classList.add("hidden");
   if (cajaVista) cajaVista.classList.add("hidden");
   if (domiciliosVista) domiciliosVista.classList.add("hidden");
+  if (menuDigitalVista) menuDigitalVista.classList.add("hidden");
   if (historicosVista) historicosVista.classList.remove("hidden");
   actualizarHistoricos();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -6485,9 +6530,11 @@ async function abrirCajaVista() {
   const historicosVista = document.getElementById("historicosVista");
   const cajaVista = document.getElementById("cajaVista");
   const domiciliosVista = document.getElementById("domiciliosVista");
+  const menuDigitalVista = document.getElementById("menuDigitalVista");
   if (appMain) appMain.classList.add("hidden");
   if (historicosVista) historicosVista.classList.add("hidden");
   if (domiciliosVista) domiciliosVista.classList.add("hidden");
+  if (menuDigitalVista) menuDigitalVista.classList.add("hidden");
   if (cajaVista) cajaVista.classList.remove("hidden");
   await renderControlCajaDiaActual(true);
   await renderTablaCierresCaja(true);
@@ -6499,9 +6546,11 @@ function volverAlPOS() {
   const historicosVista = document.getElementById("historicosVista");
   const cajaVista = document.getElementById("cajaVista");
   const domiciliosVista = document.getElementById("domiciliosVista");
+  const menuDigitalVista = document.getElementById("menuDigitalVista");
   if (historicosVista) historicosVista.classList.add("hidden");
   if (cajaVista) cajaVista.classList.add("hidden");
   if (domiciliosVista) domiciliosVista.classList.add("hidden");
+  if (menuDigitalVista) menuDigitalVista.classList.add("hidden");
   if (appMain) appMain.classList.remove("hidden");
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -7604,9 +7653,11 @@ function volverAlPOS() {
     const historicosVista = document.getElementById('historicosVista');
     const cajaVista = document.getElementById('cajaVista');
     const domiciliosVista = document.getElementById('domiciliosVista');
+    const menuDigitalVista = document.getElementById('menuDigitalVista');
     if (appMain) appMain.classList.add('hidden');
     if (historicosVista) historicosVista.classList.add('hidden');
     if (cajaVista) cajaVista.classList.add('hidden');
+    if (menuDigitalVista) menuDigitalVista.classList.add('hidden');
     if (domiciliosVista) domiciliosVista.classList.remove('hidden');
     actualizarDomiciliosVista();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -7622,7 +7673,7 @@ window.addEventListener('DOMContentLoaded', () => {
   aplicarPermisosPorRol();
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !document.getElementById('seccionEditorCatalogo')?.classList.contains('hidden')) {
+    if (event.key === 'Escape' && !document.getElementById('menuDigitalVista')?.classList.contains('hidden')) {
       cerrarEditorCatalogo();
     }
   });
@@ -8241,7 +8292,7 @@ function mostrarModuloIndependiente(nombreModulo) {
   }
 
   function hideAllViews() {
-    ["dashboardPremium", "cocinaVistaPremium", "appMain", "historicosVista", "cajaVista", "domiciliosVista"].forEach(id => {
+    ["dashboardPremium", "cocinaVistaPremium", "appMain", "historicosVista", "cajaVista", "domiciliosVista", "menuDigitalVista"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.add("hidden");
     });
@@ -9049,7 +9100,8 @@ function mostrarModuloIndependiente(nombreModulo) {
   #appMain .bg-white,
   #cajaVista .bg-white,
   #historicosVista .bg-white,
-  #domiciliosVista .bg-white {
+  #domiciliosVista .bg-white,
+  #menuDigitalVista .bg-white {
     border-radius: 0.95rem !important;
     box-shadow: 0 8px 22px rgba(58,33,22,.055) !important;
   }
@@ -9100,6 +9152,7 @@ function mostrarModuloIndependiente(nombreModulo) {
   #cajaVista h3,
   #historicosVista h3,
   #domiciliosVista h3,
+  #menuDigitalVista h3,
   #dashboardPremium h3,
   #cocinaVistaPremium h3 {
     font-size: 0.98rem !important;
