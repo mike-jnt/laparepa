@@ -630,7 +630,7 @@
 
             <div>
               <label for="loginClave" class="block text-sm font-bold text-gray-700 mb-2">Contraseña</label>
-              <input type="password" id="loginClave" class="w-full p-3.5 border border-yellow-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-yellow-50/40 text-gray-800 placeholder:text-gray-400" placeholder="Ingresa tu contraseña" />
+              <input type="password" id="loginClave" class="w-full p-3.5 border border-yellow-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-yellow-50/40 text-gray-800 placeholder:text-gray-400" placeholder="Contraseña de Firebase Authentication" />
               <label class="mt-3 inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
                 <input type="checkbox" id="toggleClave" onchange="toggleVerClave()" class="rounded border-yellow-300 text-yellow-500 focus:ring-yellow-400" />
                 Ver contraseña
@@ -639,6 +639,7 @@
 
             <button onclick="iniciarSesion()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-yellow-200/60 transition">🔐 Ingresar</button>
             <p id="loginError" class="text-red-600 text-sm hidden"></p>
+            <p class="text-xs text-gray-500 leading-relaxed">Acceso conectado a Firebase Authentication. Crea los usuarios en Firebase con los correos configurados para admin, administrador y cajero.</p>
 
             <div class="rounded-2xl border border-yellow-100 bg-yellow-50/80 px-4 py-3 text-xs text-gray-500 leading-5">
               Accede con tu usuario autorizado para registrar ventas, imprimir pedidos y controlar el sistema.
@@ -3595,6 +3596,56 @@ function resolverEmailIngreso(entradaUsuario = "") {
   return `${valor}@prsenorarepa.com`;
 }
 
+async function prepararFirebaseAuthBase() {
+  if (!window.firebase || !firebaseConfig?.apiKey) throw new Error("Firebase no está cargado o falta configuración.");
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  firebaseApp = firebase.app();
+  firebaseAuth = firebase.auth ? firebase.auth() : null;
+  firestoreDb = firebase.firestore ? firebase.firestore() : null;
+  if (!firebaseAuth) throw new Error("Firebase Authentication no está disponible.");
+  try { await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch (_) {}
+  if (firestoreDb) {
+    try { firestoreDb.settings({ experimentalForceLongPolling: true, useFetchStreams: false, merge: true }); } catch (_) {}
+  }
+}
+
+function esperarUsuarioFirebaseActual(timeoutMs = 4500) {
+  return new Promise((resolve) => {
+    if (!firebaseAuth) return resolve(null);
+    if (firebaseAuth.currentUser) return resolve(firebaseAuth.currentUser);
+    let terminado = false;
+    const timer = setTimeout(() => {
+      if (terminado) return;
+      terminado = true;
+      try { unsub && unsub(); } catch (_) {}
+      resolve(firebaseAuth.currentUser || null);
+    }, timeoutMs);
+    const unsub = firebaseAuth.onAuthStateChanged((user) => {
+      if (terminado) return;
+      terminado = true;
+      clearTimeout(timer);
+      try { unsub && unsub(); } catch (_) {}
+      resolve(user || null);
+    }, () => {
+      if (terminado) return;
+      terminado = true;
+      clearTimeout(timer);
+      try { unsub && unsub(); } catch (_) {}
+      resolve(null);
+    });
+  });
+}
+
+function obtenerMensajeErrorAuth(error = {}) {
+  const code = String(error?.code || "");
+  if (code.includes("auth/invalid-credential") || code.includes("auth/wrong-password")) return "Correo o contraseña incorrectos en Firebase Authentication.";
+  if (code.includes("auth/user-not-found")) return "Ese usuario no existe en Firebase Authentication.";
+  if (code.includes("auth/operation-not-allowed")) return "Activa Email/Password en Authentication → Sign-in method.";
+  if (code.includes("auth/too-many-requests")) return "Demasiados intentos. Espera un momento y vuelve a probar.";
+  if (code.includes("auth/network-request-failed")) return "No hay conexión para validar la sesión con Firebase.";
+  return "No se pudo iniciar sesión con Firebase Authentication.";
+}
+
 function aplicarSesionAutenticada(usuario, rol, email) {
   usuarioActual = usuario || "";
   rolActual = rol || "";
@@ -4081,22 +4132,33 @@ async function inicializarFirebaseVentas() {
   firestoreDisponible = false;
 
   try {
-    if (!window.firebase || !firebaseConfig?.apiKey) throw new Error("Firebase no está cargado o falta configuración.");
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    firebaseApp = firebase.app();
-    firestoreDb = firebase.firestore();
-    try { firestoreDb.settings({ experimentalForceLongPolling: true, useFetchStreams: false, merge: true }); } catch (_) {}
-    firebaseAuth = firebase.auth ? firebase.auth() : null;
-    if (firebaseAuth) {
-      try {
-        if (!firebaseAuth.currentUser && firebaseAuth.signInAnonymously) await firebaseAuth.signInAnonymously();
-        authDisponible = !!firebaseAuth.currentUser;
-      } catch (authError) {
-        console.warn("Auth anónimo no disponible; se intentará usar Firestore sin sesión:", authError);
-        authDisponible = false;
-      }
+    await prepararFirebaseAuthBase();
+
+    const usuarioFirebase = await esperarUsuarioFirebaseActual();
+    if (!usuarioFirebase) {
+      limpiarSesionLocal();
+      actualizarIndicadorFirebase("local", "Inicia sesión con Firebase Authentication.");
+      cargarCatalogoProductos();
+      mostrarVentas();
+      refrescarVistasAnaliticasSiEstanAbiertas();
+      renderPedidosCatalogo();
+      return;
     }
 
+    const registroAuth = resolverRegistroUsuario(usuarioFirebase.email || "");
+    if (!registroAuth) {
+      try { await firebaseAuth.signOut(); } catch (_) {}
+      limpiarSesionLocal();
+      actualizarIndicadorFirebase("local", "Usuario de Firebase no autorizado en este POS.");
+      cargarCatalogoProductos();
+      mostrarVentas();
+      refrescarVistasAnaliticasSiEstanAbiertas();
+      renderPedidosCatalogo();
+      return;
+    }
+
+    aplicarSesionAutenticada(registroAuth.usuario, registroAuth.rol, registroAuth.email || usuarioFirebase.email || "");
+    authDisponible = true;
     firestoreDisponible = true;
     registrarHeartbeatFirebase();
     cargarCatalogoProductos();
@@ -4237,35 +4299,55 @@ async function iniciarSesion() {
   const registro = resolverRegistroUsuario(usuario);
   if (!registro) {
     if (error) {
-      error.textContent = "Usuario no encontrado en este sistema local.";
+      error.textContent = "Usuario no autorizado para este POS. Usa admin, administrador, cajero o el correo registrado.";
       error.classList.remove("hidden");
     }
     return;
   }
 
-  const claveEsperada = clavesLocalesSistema[registro.usuario] || "";
-  if (clave !== claveEsperada) {
+  const emailAuth = registro.email || resolverEmailIngreso(usuario);
+
+  try {
     if (error) {
-      error.textContent = "Contraseña incorrecta. Acceso local: admin / 1234, administrador / 1234 o cajero / 1234.";
+      error.textContent = "Validando acceso con Firebase Authentication...";
       error.classList.remove("hidden");
+      error.classList.remove("text-red-600");
+      error.classList.add("text-amber-700");
     }
-    return;
+
+    await prepararFirebaseAuthBase();
+    await firebaseAuth.signInWithEmailAndPassword(emailAuth, clave);
+    firebaseInicializado = false;
+    aplicarSesionAutenticada(registro.usuario, registro.rol, emailAuth);
+
+    if (error) {
+      error.classList.add("hidden");
+      error.classList.add("text-red-600");
+      error.classList.remove("text-amber-700");
+    }
+
+    const campoClave = document.getElementById("loginClave");
+    const campoUsuario = document.getElementById("loginUsuario");
+    const toggle = document.getElementById("toggleClave");
+    if (campoClave) campoClave.value = "";
+    if (campoUsuario) campoUsuario.value = "";
+    if (toggle) toggle.checked = false;
+    toggleVerClave();
+
+    await inicializarFirebaseVentas();
+    await renderControlCajaDiaActual(true);
+    renderTablaCierresCaja(false);
+  } catch (authError) {
+    console.error("No se pudo iniciar sesión con Firebase Authentication:", authError);
+    limpiarSesionLocal();
+    if (error) {
+      error.textContent = obtenerMensajeErrorAuth(authError);
+      error.classList.remove("hidden");
+      error.classList.add("text-red-600");
+      error.classList.remove("text-amber-700");
+    }
+    actualizarIndicadorFirebase("local", "Inicio de sesión no validado.");
   }
-
-  aplicarSesionAutenticada(registro.usuario, registro.rol, registro.email || "");
-  if (error) error.classList.add("hidden");
-
-  const campoClave = document.getElementById("loginClave");
-  const campoUsuario = document.getElementById("loginUsuario");
-  const toggle = document.getElementById("toggleClave");
-  if (campoClave) campoClave.value = "";
-  if (campoUsuario) campoUsuario.value = "";
-  if (toggle) toggle.checked = false;
-  toggleVerClave();
-
-  await inicializarFirebaseVentas();
-  await renderControlCajaDiaActual(true);
-  renderTablaCierresCaja(false);
 }
 
 function esAdmin() {
@@ -4316,6 +4398,15 @@ async function cerrarSesionRol() {
     pedidosCatalogoUnsubscribe();
     pedidosCatalogoUnsubscribe = null;
   }
+  try {
+    if (!firebaseAuth && window.firebase?.auth) firebaseAuth = firebase.auth();
+    if (firebaseAuth?.currentUser) await firebaseAuth.signOut();
+  } catch (error) {
+    console.warn("No se pudo cerrar la sesión de Firebase:", error);
+  }
+  firestoreDisponible = false;
+  authDisponible = false;
+  firebaseInicializado = false;
   limpiarSesionLocal();
   actualizarEstadoCatalogoSync('Catálogo guardado en este dispositivo', 'neutral');
   actualizarIndicadorFirebase("local", "Sesión cerrada. Los datos locales se conservaron.");
@@ -6250,8 +6341,10 @@ function volverAlPOS() {
       }
       actualizarCampoCostoDomicilio();
       await inicializarFirebaseVentas();
-      await renderControlCajaDiaActual(true);
-      renderTablaCierresCaja(false);
+      if (sesionActiva && tieneRolValido()) {
+        await renderControlCajaDiaActual(true);
+        renderTablaCierresCaja(false);
+      }
       document.querySelectorAll('#modalAperturaCaja, #modalCierreCaja, #modalDineroEsperado, #modalPagoMixto').forEach(modal => {
         modal?.addEventListener('click', (event) => {
           if (event.target === modal) cerrarModalCaja(modal.id);
