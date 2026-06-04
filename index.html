@@ -40,12 +40,10 @@
   }
 
 
-/* Cocina desactivada: se conserva el código para reconexión futura, pero no se muestra ni participa en la operación actual. */
+/* Cocina desactivada: se conserva el módulo de cocina oculto, pero se permite imprimir el recibo/comanda de cocina manualmente. */
 html[data-cocina="off"] #cocinaVistaPremium,
 html[data-cocina="off"] #lpHeaderCocina,
-html[data-cocina="off"] [onclick*="mostrarCocinaPremium"],
-html[data-cocina="off"] [onclick*="imprimirUltimaCocinero"],
-html[data-cocina="off"] [onclick*="imprimirVentaCocina"]{
+html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
   display:none !important;
 }
 
@@ -612,10 +610,10 @@ html[data-cocina="off"] [onclick*="imprimirVentaCocina"]{
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script>
-  window.LP_COCINA_ACTIVA = false; // Cambiar a true cuando se quiera reconectar la sección de cocina.
+  window.LP_COCINA_ACTIVA = false; // El panel de cocina sigue oculto. La impresión manual de cocina sí queda activa.
   window.LP_OCULTAR_COCINA_HEADER = function(){
     if (window.LP_COCINA_ACTIVA !== false) return;
-    document.querySelectorAll('#lpHeaderCocina, [onclick*="mostrarCocinaPremium"], [onclick*="imprimirUltimaCocinero"], [onclick*="imprimirVentaCocina"]').forEach(function(el){
+    document.querySelectorAll('#lpHeaderCocina, [onclick*="mostrarCocinaPremium"]').forEach(function(el){
       el.style.display = 'none';
       el.setAttribute('aria-hidden', 'true');
     });
@@ -767,6 +765,7 @@ html[data-cocina="off"] [onclick*="imprimirVentaCocina"]{
           <button type="button" onclick="guardarVenta(); cerrarMobileMenu();" class="menu-link-text">💾 Guardar venta</button>
           <button type="button" onclick="cancelarPedidoActual(); cerrarMobileMenu();" data-role="admin-only" class="menu-link-text admin">↩️ Quitar último agregado</button>
           <button type="button" onclick="imprimirUltimaCliente(); cerrarMobileMenu();" class="menu-link-text">🧾 Imprimir recibo cliente</button>
+          <button type="button" onclick="imprimirUltimaCocinero(); cerrarMobileMenu();" class="menu-link-text">👨‍🍳 Imprimir recibo cocina</button>
           <button type="button" onclick="abrirCajaVista(); cerrarMobileMenu();" class="menu-link-text">💵 Cierre del día</button>
           <button type="button" onclick="cerrarMobileMenu(); mostrarModuloIndependiente('Finanzas');" data-role="finanzas-only" class="menu-link-text admin">📋 Finanzas</button>
           <button type="button" onclick="cerrarMobileMenu(); mostrarModuloIndependiente('Nómina');" data-role="gestion-only" class="menu-link-text admin">👥 Nómina</button>
@@ -793,8 +792,9 @@ html[data-cocina="off"] [onclick*="imprimirVentaCocina"]{
     </button>
     <button type="button" onclick="guardarVenta()" class="bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-3 rounded-xl whitespace-nowrap">💾 Guardar</button>
   </div>
-  <div class="grid grid-cols-2 gap-2">
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
     <button type="button" onclick="imprimirUltimaCliente()" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 rounded-xl">🧾 Cliente</button>
+    <button type="button" onclick="imprimirUltimaCocinero()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-xl">👨‍🍳 Cocina</button>
     <button type="button" onclick="cancelarPedidoActual()" data-role="admin-only" class="bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-3 rounded-xl">↩️ Último</button>
   </div>
 </div>
@@ -1039,6 +1039,7 @@ html[data-cocina="off"] [onclick*="imprimirVentaCocina"]{
         <button type="button" onclick="cancelarPedidoActual()" data-role="admin-only" class="bg-red-100 hover:bg-red-200 text-red-700 p-3 rounded-xl font-semibold">↩️ Quitar último agregado</button>
         <button onclick="guardarVenta()" class="hidden md:inline-flex bg-green-500 hover:bg-green-600 text-white p-3 rounded-xl font-semibold">💾 Guardar Venta</button>
         <button onclick="imprimirUltimaCliente()" class="hidden md:inline-flex bg-purple-500 hover:bg-purple-600 text-white p-3 rounded-xl font-semibold">🧾 Imprimir Recibo Cliente</button>
+        <button onclick="imprimirUltimaCocinero()" class="hidden md:inline-flex bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-xl font-semibold">👨‍🍳 Imprimir Recibo Cocina</button>
        <button id="btnExportarExcel" onclick="exportarVentasExcelConEstilo()" data-role="gestion-only" class="hidden md:inline-flex bg-green-600 hover:bg-green-700 text-white p-3 rounded-xl font-semibold">
         📊 Exportar Ventas a Excel
        </button>
@@ -5215,17 +5216,27 @@ function cancelarPedidoActual() {
     };
 
     const esVentaNueva = !ventaDocIdEnEdicion;
-    const cocinaActivaParaImpresion = window.LP_COCINA_ACTIVA !== false;
-    const popupImpresionCocina = (cocinaActivaParaImpresion && esVentaNueva)
-      ? window.open('', '_blank', 'width=420,height=720')
-      : null;
+    // Se preabre la ventana desde el clic de guardar para evitar que el navegador bloquee la impresión automática.
+    // Al guardar se imprime automáticamente solo el recibo del cliente; el recibo/comanda de cocina queda disponible de forma manual en la tabla de ventas.
+    const popupImpresionCliente = window.open('', '_blank', 'width=420,height=720');
 
-    if (popupImpresionCocina) {
+    if (popupImpresionCliente) {
       try {
-        popupImpresionCocina.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Preparando impresión</title></head><body style="font-family:sans-serif;padding:16px;">Preparando comanda de cocina...</body></html>');
-        popupImpresionCocina.document.close();
+        popupImpresionCliente.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Preparando recibo cliente</title></head><body style="font-family:sans-serif;padding:16px;">Preparando recibo del cliente...</body></html>');
+        popupImpresionCliente.document.close();
       } catch (_) {}
     }
+
+    const imprimirReciboClienteAutomatico = (ventaGuardada) => {
+      try {
+        imprimirReciboClienteVenta(ventaGuardada, popupImpresionCliente);
+      } catch (error) {
+        console.warn('No se pudo abrir la impresión automática del recibo cliente.', error);
+        if (popupImpresionCliente && !popupImpresionCliente.closed) {
+          try { popupImpresionCliente.close(); } catch (_) {}
+        }
+      }
+    };
 
     try {
       venta._localId = venta._localId || ventaOriginalEnEdicion?._localId || generarIdVentaLocal();
@@ -5244,14 +5255,7 @@ function cancelarPedidoActual() {
 
         guardarReferenciaUltimaVenta(ventaLocal);
         limpiarContextoEdicionVenta();
-        alert(firestoreDisponible ? "Venta guardada al instante. Se está sincronizando con la base de datos." : "Venta guardada exitosamente.");
-        if (cocinaActivaParaImpresion) {
-          if (popupImpresionCocina) {
-            imprimirComandaVenta(ventaLocal, popupImpresionCocina);
-          } else {
-            setTimeout(() => imprimirComandaVenta(ventaLocal), 80);
-          }
-        }
+        imprimirReciboClienteAutomatico(ventaLocal);
       } else {
         if (firestoreDisponible) {
           const docIdGuardado = await guardarVentaEnFirebase(venta, ventaDocIdEnEdicion);
@@ -5263,7 +5267,7 @@ function cancelarPedidoActual() {
         await sincronizarInventarioBebidasPorCambio(venta, ventaOriginalEnEdicion);
         guardarReferenciaUltimaVenta(venta);
         limpiarContextoEdicionVenta();
-        alert("Venta guardada exitosamente.");
+        imprimirReciboClienteAutomatico(venta);
       }
 
       if (pedidoCatalogoActualId) {
@@ -5276,7 +5280,7 @@ function cancelarPedidoActual() {
       document.getElementById("resumenProductos").classList.add("hidden");
     } catch (error) {
       try {
-        if (popupImpresionCocina && !popupImpresionCocina.closed) popupImpresionCocina.close();
+        if (popupImpresionCliente && !popupImpresionCliente.closed) popupImpresionCliente.close();
       } catch (_) {}
       console.error("Error al guardar la venta:", error);
       alert("No se pudo guardar la venta. Revisa la conexión o la configuración de Firebase.");
@@ -5893,9 +5897,8 @@ function cancelarPedidoActual() {
       .join("");
 
     let botonesAccion = `
-      <div class="grid grid-cols-2 gap-2 mt-3">
-        <button onclick="imprimirVentaCliente(${i})" class="bg-purple-500 text-white px-3 py-2 rounded-lg text-sm font-semibold">🧾 Cliente</button>
-        <button onclick="imprimirVentaCocina(${i})" class="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm font-semibold">👨‍🍳 Cocina</button>
+      <div class="grid grid-cols-1 gap-2 mt-3">
+        <button onclick="imprimirVentaCliente(${i})" class="bg-purple-500 text-white px-3 py-2 rounded-lg text-sm font-semibold">🧾 Recibo cliente</button>
       </div>
     `;
 
@@ -6379,6 +6382,132 @@ function construirListaProductosImpresion(venta = {}, resumido = false) {
     .join('');
 }
 
+
+
+/* =========================================================
+   APERTURA DE CAJA REGISTRADORA - IMPRESORA ESC/POS
+   Modelo de referencia: SAT Q23T UE / compatible ESC/POS.
+   Comando usado: ESC p 0 25 250  =>  HEX 1B 70 00 19 FA.
+
+   IMPORTANTE:
+   - Con window.print() el navegador no puede enviar bytes ESC/POS crudos directamente.
+   - Para que el cajón se abra físicamente hay 2 caminos:
+     1) Configurar el driver de Windows de la impresora para abrir el cajón al imprimir.
+     2) Usar un puente de impresión como QZ Tray o WebSerial y enviar el comando ESC/POS.
+   Esta función queda lista para QZ Tray/WebSerial y se ejecuta cada vez que se imprime
+   Recibo Cliente o Pedido Cocina.
+   ========================================================= */
+window.LP_ABRIR_CAJA_AL_IMPRIMIR = true;
+window.LP_CASH_DRAWER_PRINTER_NAME = localStorage.getItem('lpCashDrawerPrinterName') || 'SAT Q23T UE';
+window.LP_CASH_DRAWER_COMMAND = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]);
+window.LP_CASH_DRAWER_USAR_WEB_SERIAL = localStorage.getItem('lpCashDrawerWebSerial') === 'on';
+
+function configurarNombreImpresoraCaja(nombreImpresora) {
+  const nombre = String(nombreImpresora || '').trim();
+  if (!nombre) {
+    alert('Escribe el nombre exacto de la impresora como aparece en Windows. Ejemplo: SAT Q23T UE');
+    return;
+  }
+  localStorage.setItem('lpCashDrawerPrinterName', nombre);
+  window.LP_CASH_DRAWER_PRINTER_NAME = nombre;
+  alert('Impresora para apertura de caja configurada: ' + nombre);
+}
+
+function activarAperturaCajaRegistradora() {
+  window.LP_ABRIR_CAJA_AL_IMPRIMIR = true;
+  localStorage.setItem('lpCashDrawerAutoOpen', 'on');
+  alert('Apertura de caja activada para recibo cliente y recibo cocina.');
+}
+
+function desactivarAperturaCajaRegistradora() {
+  window.LP_ABRIR_CAJA_AL_IMPRIMIR = false;
+  localStorage.setItem('lpCashDrawerAutoOpen', 'off');
+  alert('Apertura de caja desactivada.');
+}
+
+(function restaurarConfiguracionCajaRegistradora() {
+  const estado = localStorage.getItem('lpCashDrawerAutoOpen');
+  if (estado === 'off') window.LP_ABRIR_CAJA_AL_IMPRIMIR = false;
+})();
+
+async function configurarPuertoCajaRegistradoraSerial() {
+  if (!('serial' in navigator)) {
+    alert('Este navegador no permite WebSerial. Usa Google Chrome o configura el driver de la impresora para abrir el cajón al imprimir.');
+    return false;
+  }
+  try {
+    const port = await navigator.serial.requestPort();
+    window.__lpCashDrawerSerialPort = port;
+    window.LP_CASH_DRAWER_USAR_WEB_SERIAL = true;
+    localStorage.setItem('lpCashDrawerWebSerial', 'on');
+    alert('Puerto serial de caja configurado. Ahora al imprimir recibo cliente o cocina se intentará abrir el cajón.');
+    return true;
+  } catch (error) {
+    console.warn('No se configuró el puerto serial de la caja.', error);
+    alert('No se configuró el puerto de la caja registradora.');
+    return false;
+  }
+}
+
+async function abrirCajaRegistradora() {
+  if (window.LP_ABRIR_CAJA_AL_IMPRIMIR === false) return false;
+
+  const comandoTexto = '\x1B\x70\x00\x19\xFA';
+
+  // Opción 1: QZ Tray, recomendada para enviar comandos ESC/POS crudos desde navegador.
+  try {
+    if (window.qz && qz.websocket && qz.print && qz.configs) {
+      if (!qz.websocket.isActive()) {
+        await qz.websocket.connect();
+      }
+      const nombreImpresora = localStorage.getItem('lpCashDrawerPrinterName') || window.LP_CASH_DRAWER_PRINTER_NAME || 'SAT Q23T UE';
+      const config = qz.configs.create(nombreImpresora, { encoding: 'ISO-8859-1' });
+      await qz.print(config, [{ type: 'raw', format: 'command', data: comandoTexto }]);
+      console.info('Caja registradora abierta por QZ Tray.');
+      return true;
+    }
+  } catch (error) {
+    console.warn('No se pudo abrir la caja registradora con QZ Tray.', error);
+  }
+
+  // Opción 2: WebSerial. Solo funciona si la impresora/cajón aparece como puerto serial.
+  try {
+    if (window.LP_CASH_DRAWER_USAR_WEB_SERIAL && 'serial' in navigator) {
+      let port = window.__lpCashDrawerSerialPort;
+      if (!port) {
+        const ports = await navigator.serial.getPorts();
+        port = ports && ports.length ? ports[0] : null;
+        window.__lpCashDrawerSerialPort = port;
+      }
+      if (port && port.writable) {
+        const writer = port.writable.getWriter();
+        await writer.write(window.LP_CASH_DRAWER_COMMAND);
+        writer.releaseLock();
+        console.info('Caja registradora abierta por WebSerial.');
+        return true;
+      }
+      if (port && !port.writable) {
+        await port.open({ baudRate: 9600 });
+        const writer = port.writable.getWriter();
+        await writer.write(window.LP_CASH_DRAWER_COMMAND);
+        writer.releaseLock();
+        console.info('Caja registradora abierta por WebSerial.');
+        return true;
+      }
+    }
+  } catch (error) {
+    console.warn('No se pudo abrir la caja registradora con WebSerial.', error);
+  }
+
+  // Opción 3: driver de Windows. El código imprime el recibo; el driver debe abrir el cajón.
+  console.info('Recibo impreso. Para abrir el cajón sin QZ Tray/WebSerial, activa en el driver SAT Q23T UE la opción de abrir cajón antes/después de imprimir.');
+  return false;
+}
+
+function debeAbrirCajaPorImpresion(titulo = '') {
+  return /recibo\s*cliente|pedido\s*cocina|recibo\s*cocina|cocina/i.test(String(titulo || ''));
+}
+
 function abrirVentanaImpresion(contenido, titulo = 'Impresión', ventanaDestino = null) {
   const w = ventanaDestino && !ventanaDestino.closed
     ? ventanaDestino
@@ -6395,6 +6524,11 @@ function abrirVentanaImpresion(contenido, titulo = 'Impresión', ventanaDestino 
       try {
         w.focus();
         w.print();
+        if (typeof abrirCajaRegistradora === 'function' && typeof debeAbrirCajaPorImpresion === 'function' && debeAbrirCajaPorImpresion(titulo)) {
+          setTimeout(() => {
+            abrirCajaRegistradora().catch(error => console.warn('No se pudo ejecutar la apertura de caja registradora.', error));
+          }, 250);
+        }
       } catch (error) {
         console.warn('No se pudo lanzar la impresión automática.', error);
       }
@@ -6408,14 +6542,22 @@ function abrirVentanaImpresion(contenido, titulo = 'Impresión', ventanaDestino 
 }
 
 function imprimirComandaVenta(venta, ventanaDestino = null) {
-  if (window.LP_COCINA_ACTIVA === false) { return; }
-
   if (!venta) return null;
   if (esVentaCancelada(venta)) return null;
   if (!Array.isArray(venta.pedido) || !venta.pedido.length) return null;
   return abrirVentanaImpresion(
     generarPlantillaComanda(venta, venta.comanda ?? venta.recibo ?? 1),
     'Pedido Cocina',
+    ventanaDestino
+  );
+}
+
+function imprimirReciboClienteVenta(venta, ventanaDestino = null) {
+  if (!venta) return null;
+  if (esVentaCancelada(venta)) return null;
+  return abrirVentanaImpresion(
+    generarPlantillaReciboCliente(venta, venta.recibo ?? venta.comanda ?? 1),
+    'Recibo Cliente',
     ventanaDestino
   );
 }
@@ -6598,8 +6740,6 @@ function generarPlantillaComanda(venta = {}, referencia = 1) {
 }
 
 function imprimirUltimaCocinero() {
-  if (window.LP_COCINA_ACTIVA === false) { return; }
-
   if (!verificarAcceso(["admin", "cajero"])) return;
   const ultimaVenta = obtenerUltimaVentaGuardada();
   if (!ultimaVenta) {
@@ -6654,8 +6794,6 @@ function imprimirVentaCliente(index) {
 }
 
 function imprimirVentaCocina(index) {
-  if (window.LP_COCINA_ACTIVA === false) { return; }
-
   if (!verificarAcceso(["admin", "cajero"])) return;
   const ventas = obtenerVentasStorage();
   const venta = ventas[index];
