@@ -629,6 +629,45 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
   }
 </style>
 
+
+<style id="lp-descuento20-visible-style">
+  .lp-descuento20-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 50px !important;
+    padding: 0.85rem 1.25rem !important;
+    border-radius: 1rem !important;
+    font-size: 1rem !important;
+    line-height: 1.15 !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.02em !important;
+    border: 2px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16) !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease !important;
+  }
+
+  .lp-descuento20-btn:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .lp-descuento20-activo {
+    border-color: rgba(127, 29, 29, 0.25) !important;
+  }
+
+  .lp-descuento20-inactivo {
+    border-color: rgba(20, 83, 45, 0.25) !important;
+  }
+
+  @media (max-width: 767px) {
+    .lp-descuento20-btn {
+      min-height: 48px !important;
+      padding: 0.8rem 1rem !important;
+      font-size: 0.94rem !important;
+    }
+  }
+</style>
 </head>
 
 <body class="bg-yellow-50 font-sans">
@@ -729,6 +768,9 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
         <button type="button" onclick="abrirCajaVista()" class="bg-white text-yellow-700 font-semibold px-3 py-2 rounded-lg shadow hover:bg-yellow-100 transition text-center">
           💵 Cierre del día
         </button>
+        <button type="button" onclick="abrirModalAperturaCajaManual()" class="bg-green-600 text-white font-bold px-3 py-2 rounded-lg shadow hover:bg-green-700 transition text-center">
+          💰 Abrir caja
+        </button>
         <button type="button" onclick="mostrarModuloIndependiente('Inventario')" data-role="gestion-only" class="bg-yellow-600 text-white font-semibold px-3 py-2 rounded-lg shadow hover:bg-yellow-700 transition text-center">
           📆 Inventario
         </button>
@@ -767,6 +809,7 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
           <button type="button" onclick="imprimirUltimaCliente(); cerrarMobileMenu();" class="menu-link-text">🧾 Imprimir recibo cliente</button>
           <button type="button" onclick="imprimirUltimaCocinero(); cerrarMobileMenu();" class="menu-link-text">👨‍🍳 Imprimir recibo cocina</button>
           <button type="button" onclick="abrirCajaVista(); cerrarMobileMenu();" class="menu-link-text">💵 Cierre del día</button>
+          <button type="button" onclick="abrirModalAperturaCajaManual(); cerrarMobileMenu();" class="menu-link-text">💰 Abrir caja</button>
           <button type="button" onclick="cerrarMobileMenu(); mostrarModuloIndependiente('Finanzas');" data-role="finanzas-only" class="menu-link-text admin">📋 Finanzas</button>
           <button type="button" onclick="cerrarMobileMenu(); mostrarModuloIndependiente('Nómina');" data-role="gestion-only" class="menu-link-text admin">👥 Nómina</button>
           <button type="button" onclick="abrirHistoricos(); cerrarMobileMenu();" data-role="gestion-only" class="menu-link-text admin">📈 Históricos</button>
@@ -795,6 +838,7 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
     <button type="button" onclick="imprimirUltimaCliente()" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 rounded-xl">🧾 Cliente</button>
     <button type="button" onclick="imprimirUltimaCocinero()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-xl">👨‍🍳 Cocina</button>
+    <button type="button" onclick="abrirModalAperturaCajaManual()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl">💰 Caja</button>
     <button type="button" onclick="cancelarPedidoActual()" data-role="admin-only" class="bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-3 rounded-xl">↩️ Último</button>
   </div>
 </div>
@@ -876,7 +920,6 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
         <!-- Adiciones -->
         <div id="categoriaAdiciones" class="bg-white p-4 rounded-xl shadow-md hidden md:block">
           <h3 class="text-xl font-semibold text-yellow-600 mb-2">Adiciones</h3>
-          <p class="text-sm text-gray-500 mb-3">Opcional: agrega las adiciones que necesites.</p>
           <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
             <button onclick="agregarProducto('ADICION QUESO EXTRA', 5000)" class="bg-yellow-300 hover:bg-yellow-400 p-3 rounded-xl shadow-sm">🧀 Queso Extra - $5.000</button>
             <button onclick="agregarProducto('ADICION MAIZ TIERNO', 3000)" class="bg-yellow-300 hover:bg-yellow-400 p-3 rounded-xl shadow-sm">🌽 MAIZ TIERNO - $3.000</button>
@@ -895,7 +938,6 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
         <!-- Bebidas -->
         <div id="categoriaBebidas" class="bg-white p-4 rounded-xl shadow-md hidden md:block">
           <h3 class="text-xl font-semibold text-yellow-600 mb-2">Bebidas</h3>
-          <p class="text-sm text-gray-500 mb-3">Opcional: agrega una o varias bebidas antes de continuar.</p>
           <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
             <button onclick="agregarProducto('QUATRO', 4000)" class="bg-yellow-300 hover:bg-yellow-400 p-3 rounded-xl shadow-sm">🍋 QUATRO - $4.000</button>
             <button onclick="agregarProducto('COCA COLA 400 ml', 4000)" class="bg-yellow-300 hover:bg-yellow-400 p-3 rounded-xl shadow-sm">🥤 COCA COLA - $4.000</button>
@@ -939,7 +981,10 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
           <span id="contadorItemsPaso1" class="text-xs font-semibold bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full">0 items</span>
         </div>
         <ul id="listaPedidoPaso1" class="space-y-2 text-sm text-gray-700"></ul>
-        <p id="totalPaso1" class="mt-3 font-bold text-lg text-gray-800">Total: $0</p>
+        <div class="mt-3 flex items-center justify-between gap-2">
+          <p id="totalPaso1" class="font-bold text-lg text-gray-800">Total: $0</p>
+          <button type="button" data-descuento20-btn onclick="toggleDescuento20()" class="lp-descuento20-btn lp-descuento20-inactivo bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">20% DESCUENTO</button>
+        </div>
         <p id="detalleTotalPaso1" class="mt-1 text-sm text-gray-500 hidden"></p>
       </div>
 
@@ -1029,7 +1074,10 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
       <div id="pedidoActualCard" class="mt-4 bg-white p-4 rounded-2xl shadow-md border border-yellow-100 md:hidden">
         <h3 class="text-lg font-semibold mb-4 border-b pb-2">🛒 Pedido Actual</h3>
         <ul id="listaPedido" class="list-disc pl-5 text-gray-700 space-y-1"></ul>
-        <p id="total" class="mt-4 font-bold text-lg text-gray-800">Total: $0</p>
+        <div class="mt-4 flex items-center justify-between gap-2">
+          <p id="total" class="font-bold text-lg text-gray-800">Total: $0</p>
+          <button type="button" data-descuento20-btn onclick="toggleDescuento20()" class="lp-descuento20-btn lp-descuento20-inactivo bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">20% DESCUENTO</button>
+        </div>
         <p id="detalleTotalPedido" class="mt-1 text-sm text-gray-500 hidden"></p>
       </div>
 
@@ -1326,12 +1374,13 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
           <p class="text-xs uppercase tracking-wide text-yellow-700 font-bold">Control de caja</p>
           <h3 class="text-xl font-extrabold text-gray-800">Apertura de caja</h3>
         </div>
-        <button type="button" onclick="cerrarModalCaja('modalAperturaCaja')" class="w-10 h-10 rounded-full bg-white border border-yellow-200 text-gray-600 hover:bg-yellow-100">✕</button>
+        <button type="button" data-lp-apertura-cerrar="true" onclick="cerrarModalCaja('modalAperturaCaja')" class="w-10 h-10 rounded-full bg-white border border-yellow-200 text-gray-600 hover:bg-yellow-100">✕</button>
       </div>
       <div class="p-6 space-y-4">
         <div class="rounded-2xl border border-yellow-100 bg-yellow-50 p-4">
           <p class="text-sm font-semibold text-gray-800">Estado actual</p>
           <p id="aperturaCajaInfoModal" class="mt-1 text-sm text-gray-600">Aún no registrada para hoy.</p>
+          <p id="aperturaCajaTurnoTexto" class="mt-2 text-xs font-semibold text-yellow-800">Día operativo: el turno cierra a las 12:30 a. m.</p>
         </div>
         <div>
           <label for="aperturaCajaMonto" class="block text-sm font-bold text-gray-700 mb-2">Monto de apertura</label>
@@ -1340,7 +1389,7 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
         </div>
       </div>
       <div class="px-6 py-4 border-t border-yellow-100 bg-white flex flex-col sm:flex-row gap-2 sm:justify-end">
-        <button type="button" onclick="cerrarModalCaja('modalAperturaCaja')" class="px-4 py-3 rounded-2xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200">Cancelar</button>
+        <button type="button" data-lp-apertura-cerrar="true" onclick="cerrarModalCaja('modalAperturaCaja')" class="px-4 py-3 rounded-2xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200">Cancelar</button>
         <button type="button" id="btnRegistrarAperturaCaja" onclick="registrarAperturaCaja()" class="px-4 py-3 rounded-2xl bg-yellow-500 text-white font-bold hover:bg-yellow-600">Guardar apertura</button>
       </div>
     </div>
@@ -1756,6 +1805,7 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
   <script>
       let pedido = [];
   let total = 0;
+  let descuento20Activo = false;
 let comandaEnEdicion = null; // conserva la comanda al editar
 let reciboEnEdicion = null; // conserva el recibo al editar
 const usuariosSistema = {
@@ -3157,7 +3207,7 @@ function actualizarTarjetasEstadoCaja(control = {}, resumen = {}) {
   const cards = [
     {
       label: 'Hoy',
-      value: control.diaClave || obtenerFechaLocalISO(new Date()),
+      value: control.diaClave || (typeof obtenerDiaOperativoCaja === "function" ? obtenerDiaOperativoCaja(new Date()) : obtenerFechaLocalISO(new Date())),
       extra: `${resumen.cantidadVentas || 0} pedidos · ${resumen.domicilios || 0} domicilios`,
       tone: 'bg-white border-yellow-200 text-gray-800'
     },
@@ -3186,7 +3236,7 @@ function actualizarTarjetasEstadoCaja(control = {}, resumen = {}) {
 }
 
 async function renderControlCajaDiaActual(forzarRemoto = false) {
-  const diaClave = obtenerFechaLocalISO(new Date());
+  const diaClave = typeof obtenerDiaOperativoCaja === "function" ? obtenerDiaOperativoCaja(new Date()) : obtenerFechaLocalISO(new Date());
   const control = await obtenerControlCajaDia(diaClave, forzarRemoto);
   const resumen = calcularResumenCajaDia(diaClave);
   const esperado = Number(control.aperturaMonto || 0) + Number(resumen.efectivoNetoSistema || 0);
@@ -3244,7 +3294,7 @@ function limpiarEstadoEdicionCierreCaja() {
 }
 
 function obtenerDiaObjetivoCierreCaja() {
-  return cierreCajaEdicionDiaClave || obtenerFechaLocalISO(new Date());
+  return cierreCajaEdicionDiaClave || (typeof obtenerDiaOperativoCaja === "function" ? obtenerDiaOperativoCaja(new Date()) : obtenerFechaLocalISO(new Date()));
 }
 
 function aplicarEstadoModalCierreCaja(control = {}, diaClave = "", esEdicionHistorica = false) {
@@ -3414,8 +3464,8 @@ function renderContenidoModalDesgloseCierre(control = {}, resumen = {}) {
   const contenedor = document.getElementById('contenidoModalDesgloseCierre');
   if (!contenedor) return;
 
-  const diaAnalizado = control.diaClave || obtenerFechaLocalISO(new Date());
-  const esDiaActual = diaAnalizado === obtenerFechaLocalISO(new Date());
+  const diaAnalizado = control.diaClave || (typeof obtenerDiaOperativoCaja === "function" ? obtenerDiaOperativoCaja(new Date()) : obtenerFechaLocalISO(new Date()));
+  const esDiaActual = diaAnalizado === (typeof obtenerDiaOperativoCaja === "function" ? obtenerDiaOperativoCaja(new Date()) : obtenerFechaLocalISO(new Date()));
   const apertura = Number(control.aperturaMonto || 0);
   const efectivoBruto = Number(resumen.totalEfectivo || resumen.efectivoBrutoSistema || 0);
   const transferencias = Number(resumen.totalTransferencias || 0);
@@ -3686,7 +3736,7 @@ async function registrarAperturaCaja() {
     alert('Ingresa un monto válido para la apertura.');
     return;
   }
-  const diaClave = obtenerFechaLocalISO(new Date());
+  const diaClave = typeof obtenerDiaOperativoCaja === "function" ? obtenerDiaOperativoCaja(new Date()) : obtenerFechaLocalISO(new Date());
   const actual = await obtenerControlCajaDia(diaClave, true);
   await guardarControlCajaDia(diaClave, {
     ...actual,
@@ -3754,7 +3804,7 @@ async function eliminarCierreCaja(diaClave) {
     cierreObservaciones: ''
   });
   alert('Cierre de caja eliminado correctamente.');
-  const diaActual = obtenerFechaLocalISO(new Date());
+  const diaActual = typeof obtenerDiaOperativoCaja === "function" ? obtenerDiaOperativoCaja(new Date()) : obtenerFechaLocalISO(new Date());
   if (diaClave === diaActual) {
     await renderControlCajaDiaActual(true);
   }
@@ -4981,14 +5031,72 @@ function aplicarPermisosPorRol() {
   function quitarProducto(index) {
     if (index >= 0 && index < pedido.length) {
       pedido.splice(index, 1);
+      if (pedido.length === 0) resetDescuento20();
       actualizarTotal();
       actualizarVistaPedido();
     }
   }
 
-  function obtenerSubtotalPedidoActual() {
+  function descuento20EstaActivo() {
+    return Boolean(descuento20Activo || window.lpDescuento20Activo);
+  }
+
+  function obtenerSubtotalPedidoBrutoActual() {
     return pedido.reduce((acc, p) => acc + Number(p.precio || 0), 0);
   }
+
+  function obtenerDescuento20Actual() {
+    const subtotalBruto = obtenerSubtotalPedidoBrutoActual();
+    if (!descuento20EstaActivo() || subtotalBruto <= 0) return 0;
+    return redondearPago(subtotalBruto * 0.20);
+  }
+
+  function obtenerSubtotalPedidoActual() {
+    return redondearPago(Math.max(0, obtenerSubtotalPedidoBrutoActual() - obtenerDescuento20Actual()));
+  }
+
+  function obtenerInfoDescuentoPedidoActual() {
+    const subtotalBruto = obtenerSubtotalPedidoBrutoActual();
+    const descuentoValor = obtenerDescuento20Actual();
+    return {
+      activo: descuento20EstaActivo() && descuentoValor > 0,
+      porcentaje: descuentoValor > 0 ? 20 : 0,
+      valor: descuentoValor,
+      subtotalBruto,
+      subtotalNeto: obtenerSubtotalPedidoActual()
+    };
+  }
+
+  function actualizarBotonesDescuento20UI() {
+    const activo = descuento20EstaActivo();
+    document.querySelectorAll('[data-descuento20-btn]').forEach(btn => {
+      btn.textContent = activo ? 'QUITAR 20%' : '20% DESCUENTO';
+      btn.title = activo ? 'Quitar descuento del 20%' : 'Aplicar descuento del 20% al total de productos';
+      btn.className = activo
+        ? 'lp-descuento20-btn lp-descuento20-activo bg-red-600 text-white hover:bg-red-700 whitespace-nowrap'
+        : 'lp-descuento20-btn lp-descuento20-inactivo bg-green-600 text-white hover:bg-green-700 whitespace-nowrap';
+    });
+  }
+
+  function toggleDescuento20() {
+    if (!pedido.length) {
+      alert('Agrega productos al pedido antes de aplicar el descuento.');
+      return;
+    }
+    descuento20Activo = !descuento20EstaActivo();
+    window.lpDescuento20Activo = descuento20Activo;
+    actualizarTotal();
+    actualizarVistaPedido();
+  }
+
+  function resetDescuento20() {
+    descuento20Activo = false;
+    window.lpDescuento20Activo = false;
+    actualizarBotonesDescuento20UI();
+  }
+
+  window.toggleDescuento20 = toggleDescuento20;
+  window.resetDescuento20 = resetDescuento20;
 
   function obtenerCostoDomicilioActual() {
     const tipoPedido = document.getElementById("tipoPedido")?.value || "";
@@ -5009,11 +5117,20 @@ function aplicarPermisosPorRol() {
   }
 
   function actualizarDetalleTotalPedido() {
-    const subtotalProductos = obtenerSubtotalPedidoActual();
+    const infoDescuento = obtenerInfoDescuentoPedidoActual();
     const costoDomicilio = obtenerCostoDomicilioActual();
-    const detalleTexto = costoDomicilio > 0
-      ? `Venta: ${formatearCOP(subtotalProductos)} · Domicilio: ${formatearCOP(costoDomicilio)}`
-      : "";
+    const partes = [];
+
+    if (infoDescuento.valor > 0) {
+      partes.push(`Subtotal: ${formatearCOP(infoDescuento.subtotalBruto)}`);
+      partes.push(`Descuento 20%: -${formatearCOP(infoDescuento.valor)}`);
+    }
+    if (costoDomicilio > 0) {
+      partes.push(`Venta: ${formatearCOP(infoDescuento.subtotalNeto)}`);
+      partes.push(`Domicilio: ${formatearCOP(costoDomicilio)}`);
+    }
+
+    const detalleTexto = partes.join(' · ');
     const detallePaso1 = document.getElementById("detalleTotalPaso1");
     const detallePedido = document.getElementById("detalleTotalPedido");
     [detallePaso1, detallePedido].forEach(el => {
@@ -5021,6 +5138,7 @@ function aplicarPermisosPorRol() {
       el.textContent = detalleTexto;
       el.classList.toggle("hidden", !detalleTexto);
     });
+    actualizarBotonesDescuento20UI();
     actualizarResumenPagoMixtoUI();
   }
 
@@ -5089,6 +5207,7 @@ function aplicarPermisosPorRol() {
  function limpiarPedido() {
   pedido = [];
   total = 0;
+  resetDescuento20();
   document.getElementById("cliente").value = "";
   document.getElementById("formaPago").value = "";
   document.getElementById("tipoPedido").value = "";
@@ -5116,6 +5235,7 @@ function cancelarPedidoActual() {
   if (!confirm(`¿Quitar el último producto agregado?\n\n${nombreProducto}`)) return;
 
   pedido.pop();
+  if (pedido.length === 0) resetDescuento20();
   actualizarTotal();
   actualizarVistaPedido();
 
@@ -5164,7 +5284,8 @@ function cancelarPedidoActual() {
     }
 
     actualizarTotal();
-    const subtotalProductos = obtenerSubtotalPedidoActual();
+    const infoDescuento = obtenerInfoDescuentoPedidoActual();
+    const subtotalProductos = infoDescuento.subtotalNeto;
     const observaciones = document.getElementById("observaciones").value.trim();
     const totalCobrado = redondearPago(subtotalProductos + costoDomicilio);
     const detallePagos = construirDetallePagosVentaDesdeFormulario(formaPago, totalCobrado);
@@ -5180,7 +5301,7 @@ function cancelarPedidoActual() {
 
     const ahora = new Date();
     const fechaBase = ventaOriginalEnEdicion?.fechaISO ? new Date(ventaOriginalEnEdicion.fechaISO) : ahora;
-    const diaClave = ventaOriginalEnEdicion?.diaClave || obtenerFechaLocalISO(fechaBase);
+    const diaClave = ventaOriginalEnEdicion?.diaClave || (typeof obtenerDiaOperativoCaja === "function" ? obtenerDiaOperativoCaja(fechaBase) : obtenerFechaLocalISO(fechaBase));
     const numeracionDia = comandaEnEdicion
       ? { comanda: comandaEnEdicion, recibo: reciboEnEdicion ?? comandaEnEdicion }
       : obtenerSiguienteNumeracionDelDia(diaClave);
@@ -5197,6 +5318,10 @@ function cancelarPedidoActual() {
       numeroDomicilio,
       costoDomicilio,
       subtotalProductos,
+      subtotalAntesDescuento: infoDescuento.subtotalBruto,
+      descuentoPorcentaje: infoDescuento.porcentaje,
+      descuentoValor: infoDescuento.valor,
+      descuentoNombre: infoDescuento.valor > 0 ? "Descuento 20%" : "",
       observaciones,
       pedido: [...pedido],
       detallePagos,
@@ -5504,6 +5629,7 @@ function cancelarPedidoActual() {
       return;
     }
     pedido = items;
+    resetDescuento20();
     total = obtenerSubtotalPedidoActual();
     pedidoCatalogoActualId = docId;
 
@@ -5899,6 +6025,7 @@ function cancelarPedidoActual() {
     let botonesAccion = `
       <div class="grid grid-cols-1 gap-2 mt-3">
         <button onclick="imprimirVentaCliente(${i})" class="bg-purple-500 text-white px-3 py-2 rounded-lg text-sm font-semibold">🧾 Recibo cliente</button>
+        <button onclick="imprimirVentaCocina(${i})" class="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm font-semibold">👨‍🍳 Recibo cocina</button>
       </div>
     `;
 
@@ -6382,6 +6509,26 @@ function construirListaProductosImpresion(venta = {}, resumido = false) {
     .join('');
 }
 
+function escaparHTMLImpresion(valor = '') {
+  return String(valor ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function obtenerObservacionesImpresion(venta = {}) {
+  return String(venta?.observaciones || venta?.observacion || venta?.nota || '').trim();
+}
+
+function construirBloqueObservacionesImpresion(venta = {}) {
+  const observaciones = obtenerObservacionesImpresion(venta);
+  if (!observaciones) return '';
+  const texto = escaparHTMLImpresion(observaciones).replace(/\n/g, '<br>');
+  return `<p class="observaciones-inline"><strong>Observaciones:</strong> ${texto}</p>`;
+}
+
 
 
 /* =========================================================
@@ -6547,7 +6694,7 @@ function imprimirComandaVenta(venta, ventanaDestino = null) {
   if (!Array.isArray(venta.pedido) || !venta.pedido.length) return null;
   return abrirVentanaImpresion(
     generarPlantillaComanda(venta, venta.comanda ?? venta.recibo ?? 1),
-    'Pedido Cocina',
+    'Recibo Cocina',
     ventanaDestino
   );
 }
@@ -6563,9 +6710,14 @@ function imprimirReciboClienteVenta(venta, ventanaDestino = null) {
 }
 
 function generarPlantillaReciboCliente(venta = {}, referencia = 1) {
-  const observaciones = venta?.observaciones || '';
+  const observacionesHtml = construirBloqueObservacionesImpresion(venta);
   const costoDomicilio = Number(venta?.costoDomicilio || 0);
+  const descuentoValor = Number(venta?.descuentoValor || 0);
+  const subtotalAntesDescuento = Number(venta?.subtotalAntesDescuento || 0) || (Number(venta?.total || 0) + descuentoValor);
   const fechaTexto = formatearFechaHoraColombia(venta?.fechaISO || venta?.fecha);
+  const clienteTexto = escaparHTMLImpresion(venta?.cliente || 'N/A');
+  const tipoPedidoTexto = escaparHTMLImpresion(obtenerTipoPedidoImpresion(venta));
+  const formaPagoTexto = escaparHTMLImpresion(obtenerEtiquetaFormaPago(venta));
   return `<!DOCTYPE html>
   <html lang="es">
     <head>
@@ -6597,6 +6749,18 @@ function generarPlantillaReciboCliente(venta = {}, referencia = 1) {
         .line {
           border-top: 1px dashed #000;
           margin: 8px 0;
+        }
+        .observaciones-inline {
+          border: 0;
+          padding: 0;
+          margin: 4px 0;
+          font-size: inherit;
+          font-weight: 400;
+          line-height: inherit;
+          text-align: left;
+        }
+        .observaciones-inline strong {
+          font-weight: 700;
         }
         .info p,
         .totales p {
@@ -6640,11 +6804,11 @@ function generarPlantillaReciboCliente(venta = {}, referencia = 1) {
       <div class="info">
         <p class="numero">RECIBO #${venta?.recibo ?? venta?.comanda ?? referencia}</p>
         <p class="numero">COMANDA #${venta?.comanda ?? venta?.recibo ?? referencia}</p>
-        <p><strong>Cliente:</strong> ${venta?.cliente || 'N/A'}</p>
+        <p><strong>Cliente:</strong> ${clienteTexto}</p>
         <p><strong>Fecha:</strong> ${fechaTexto}</p>
-        <p><strong>Tipo de pedido:</strong> ${obtenerTipoPedidoImpresion(venta)}</p>
-        <p><strong>Método de pago:</strong> ${obtenerEtiquetaFormaPago(venta)}</p>
-        ${observaciones ? `<p><strong>Observaciones:</strong> ${observaciones}</p>` : ''}
+        <p><strong>Tipo de pedido:</strong> ${tipoPedidoTexto}</p>
+        ${observacionesHtml}
+        <p><strong>Método de pago:</strong> ${formaPagoTexto}</p>
       </div>
       <div class="line"></div>
       <ul>
@@ -6652,6 +6816,7 @@ function generarPlantillaReciboCliente(venta = {}, referencia = 1) {
       </ul>
       <div class="line"></div>
       <div class="totales">
+        ${descuentoValor > 0 ? `<p><strong>Subtotal:</strong> ${formatearCOP(subtotalAntesDescuento)}</p><p><strong>Descuento 20%:</strong> -${formatearCOP(descuentoValor)}</p>` : ''}
         ${costoDomicilio > 0 ? `<p><strong>Domicilio:</strong> ${formatearCOP(costoDomicilio)}</p>` : ''}
         <p class="total">Total venta: ${formatearCOP(venta?.total || 0)}</p>
       </div>
@@ -6662,9 +6827,12 @@ function generarPlantillaReciboCliente(venta = {}, referencia = 1) {
 }
 
 function generarPlantillaComanda(venta = {}, referencia = 1) {
-  const observaciones = venta?.observaciones || '';
+  const observacionesHtml = construirBloqueObservacionesImpresion(venta);
   const costoDomicilio = Number(venta?.costoDomicilio || 0);
   const fechaTexto = formatearFechaHoraColombia(venta?.fechaISO || venta?.fecha);
+  const clienteTexto = escaparHTMLImpresion(venta?.cliente || 'Sin nombre');
+  const tipoPedidoTexto = escaparHTMLImpresion(obtenerTipoPedidoImpresion(venta));
+  const formaPagoTexto = escaparHTMLImpresion(obtenerEtiquetaFormaPago(venta));
   return `<!DOCTYPE html>
   <html lang="es">
     <head>
@@ -6690,6 +6858,18 @@ function generarPlantillaComanda(venta = {}, referencia = 1) {
         .line {
           border-top: 1px dashed #000;
           margin: 8px 0;
+        }
+        .observaciones-inline {
+          border: 0;
+          padding: 0;
+          margin: 4px 0;
+          font-size: inherit;
+          font-weight: 400;
+          line-height: inherit;
+          text-align: left;
+        }
+        .observaciones-inline strong {
+          font-weight: 700;
         }
         .info p,
         .extra p {
@@ -6718,16 +6898,16 @@ function generarPlantillaComanda(venta = {}, referencia = 1) {
       </style>
     </head>
     <body>
-      <h2>🧾 PEDIDO A COCINA</h2>
+      <h2>👨‍🍳 RECIBO COCINA</h2>
       <div class="line"></div>
       <div class="info">
         <p class="numero">RECIBO #${venta?.recibo ?? venta?.comanda ?? referencia}</p>
         <p class="numero">COMANDA #${venta?.comanda ?? venta?.recibo ?? referencia}</p>
-        <p><strong>Cliente:</strong> ${venta?.cliente || 'Sin nombre'}</p>
+        <p><strong>Cliente:</strong> ${clienteTexto}</p>
         <p><strong>Fecha:</strong> ${fechaTexto}</p>
-        <p><strong>Tipo de pedido:</strong> ${obtenerTipoPedidoImpresion(venta)}</p>
-        <p><strong>Método de pago:</strong> ${obtenerEtiquetaFormaPago(venta)}</p>
-        ${observaciones ? `<p><strong>Observaciones:</strong> ${observaciones}</p>` : ''}
+        <p><strong>Tipo de pedido:</strong> ${tipoPedidoTexto}</p>
+        ${observacionesHtml}
+        <p><strong>Método de pago:</strong> ${formaPagoTexto}</p>
       </div>
       <div class="line"></div>
       <ul>
@@ -6771,10 +6951,7 @@ function imprimirUltimaCliente() {
     return;
   }
 
-  abrirVentanaImpresion(
-    generarPlantillaReciboCliente(ultimaVenta, ultimaVenta.recibo ?? ultimaVenta.comanda ?? 1),
-    'Recibo Cliente'
-  );
+  imprimirReciboClienteVenta(ultimaVenta);
 }
 
 
@@ -6787,10 +6964,7 @@ function imprimirVentaCliente(index) {
   if (!venta) return alert("Venta no encontrada.");
   if (esVentaCancelada(venta)) return alert("Esta venta está cancelada y no se puede imprimir.");
 
-  abrirVentanaImpresion(
-    generarPlantillaReciboCliente(venta, venta.recibo ?? venta.comanda ?? (index + 1)),
-    'Recibo Cliente'
-  );
+  imprimirReciboClienteVenta(venta);
 }
 
 function imprimirVentaCocina(index) {
@@ -6801,10 +6975,7 @@ function imprimirVentaCocina(index) {
   if (esVentaCancelada(venta)) return alert("Esta venta está cancelada y no se puede imprimir.");
   if (!venta.pedido || !Array.isArray(venta.pedido)) return alert("Esta venta no tiene productos válidos.");
 
-  abrirVentanaImpresion(
-    generarPlantillaComanda(venta, venta.comanda ?? venta.recibo ?? (index + 1)),
-    'Pedido Cocina'
-  );
+  imprimirComandaVenta(venta);
 }
 
 async function eliminarVentaPermanentemente(index) {
@@ -9993,7 +10164,10 @@ function mostrarModuloIndependiente(nombreModulo) {
   }
 
   function lpCalcularTotalPedido(arr) {
-    return (Array.isArray(arr) ? arr : []).reduce((acc, item) => acc + Number(item?.precio || 0), 0);
+    const subtotal = (Array.isArray(arr) ? arr : []).reduce((acc, item) => acc + Number(item?.precio || 0), 0);
+    const activo = Boolean(descuento20Activo || window.lpDescuento20Activo);
+    if (!activo || subtotal <= 0) return subtotal;
+    return Math.max(0, subtotal - Math.round(subtotal * 0.20));
   }
 
   function lpRefrescarPedido() {
@@ -10099,6 +10273,9 @@ function mostrarModuloIndependiente(nombreModulo) {
 
     const totalPaso1 = document.getElementById("totalPaso1");
     if (totalPaso1) totalPaso1.textContent = "Total: " + lpFormatearCOP(totalValor);
+
+    try { if (typeof actualizarDetalleTotalPedido === "function") actualizarDetalleTotalPedido(); } catch (_) {}
+    try { if (typeof actualizarBotonesDescuento20UI === "function") actualizarBotonesDescuento20UI(); } catch (_) {}
 
     const contador = document.getElementById("contadorItemsPaso1");
     if (contador) contador.textContent = `${arr.length} item${arr.length === 1 ? "" : "s"}`;
@@ -10261,6 +10438,255 @@ function mostrarModuloIndependiente(nombreModulo) {
       window.__lpClickSafeFinalTimer = setTimeout(lpPrepararBotonesVisualmente, 80);
     }).observe(productos, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "data-product-name", "data-product-price", "onclick"] });
   }
+})();
+</script>
+
+<style id="lp-apertura-caja-obligatoria-style">
+  #modalAperturaCaja[data-obligatorio="true"] [data-lp-apertura-cerrar="true"] {
+    display: none !important;
+  }
+  #modalAperturaCaja[data-obligatorio="true"] .max-w-lg {
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35) !important;
+  }
+</style>
+
+<script id="lp-apertura-caja-obligatoria-final">
+(function(){
+  const LP_CORTE_TURNO_MINUTOS = 30; // 12:30 a. m. Colombia
+  window.LP_APERTURA_CAJA_OBLIGATORIA = false;
+
+  function lpPartesFechaColombia(fecha = new Date()) {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Bogota',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      hourCycle: 'h23'
+    });
+    const partes = Object.fromEntries(
+      formatter.formatToParts(new Date(fecha)).filter(p => p.type !== 'literal').map(p => [p.type, p.value])
+    );
+    let hora = Number(partes.hour || 0);
+    if (hora === 24) hora = 0;
+    return {
+      year: Number(partes.year),
+      month: Number(partes.month),
+      day: Number(partes.day),
+      hour: hora,
+      minute: Number(partes.minute || 0),
+      second: Number(partes.second || 0)
+    };
+  }
+
+  function lpISODesdeUTC(fechaUTC) {
+    const y = fechaUTC.getUTCFullYear();
+    const m = String(fechaUTC.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(fechaUTC.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  window.obtenerDiaOperativoCaja = function(fecha = new Date()) {
+    const p = lpPartesFechaColombia(fecha);
+    const base = new Date(Date.UTC(p.year, p.month - 1, p.day));
+    const minutosDelDia = (p.hour * 60) + p.minute;
+    if (minutosDelDia < LP_CORTE_TURNO_MINUTOS) {
+      base.setUTCDate(base.getUTCDate() - 1);
+    }
+    return lpISODesdeUTC(base);
+  };
+
+  function lpUsuarioPuedeAbrirCaja() {
+    try {
+      return typeof sesionActiva !== 'undefined' && sesionActiva && typeof tieneRolValido === 'function' && tieneRolValido() && ['admin', 'cajero'].includes(String(rolActual || ''));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function lpConfigurarModalApertura({ obligatorio = false } = {}) {
+    const modal = document.getElementById('modalAperturaCaja');
+    const titulo = modal?.querySelector('h3');
+    const info = document.getElementById('aperturaCajaInfoModal');
+    const turno = document.getElementById('aperturaCajaTurnoTexto');
+    const input = document.getElementById('aperturaCajaMonto');
+    const dia = window.obtenerDiaOperativoCaja(new Date());
+    window.LP_APERTURA_CAJA_OBLIGATORIA = Boolean(obligatorio);
+    if (modal) {
+      if (obligatorio) modal.setAttribute('data-obligatorio', 'true');
+      else modal.removeAttribute('data-obligatorio');
+    }
+    if (titulo) titulo.textContent = obligatorio ? 'Apertura de caja obligatoria' : 'Apertura de caja';
+    if (info && obligatorio) info.textContent = `Debes registrar con cuánto dinero inicia la caja del día operativo ${dia}.`;
+    if (turno) turno.textContent = `Día operativo: ${dia}. El turno cierra a las 12:30 a. m.; antes de esa hora sigue contando como el día anterior.`;
+    if (input && obligatorio) input.value = '';
+    setTimeout(() => input?.focus(), 120);
+  }
+
+  async function lpCajaAbiertaDiaOperativo(forzarRemoto = true) {
+    if (typeof obtenerControlCajaDia !== 'function') return true;
+    const diaClave = window.obtenerDiaOperativoCaja(new Date());
+    const control = await obtenerControlCajaDia(diaClave, forzarRemoto);
+    return Boolean(control && control.aperturaHora);
+  }
+
+  window.verificarAperturaCajaObligatoria = async function() {
+    if (!lpUsuarioPuedeAbrirCaja()) return true;
+    const abierta = await lpCajaAbiertaDiaOperativo(true);
+    if (abierta) {
+      const modal = document.getElementById('modalAperturaCaja');
+      window.LP_APERTURA_CAJA_OBLIGATORIA = false;
+      modal?.removeAttribute('data-obligatorio');
+      return true;
+    }
+    lpConfigurarModalApertura({ obligatorio: true });
+    if (typeof renderControlCajaDiaActual === 'function') await renderControlCajaDiaActual(true);
+    lpConfigurarModalApertura({ obligatorio: true });
+    if (typeof abrirModalCaja === 'function') abrirModalCaja('modalAperturaCaja');
+    return false;
+  };
+
+  window.abrirModalAperturaCajaManual = async function() {
+    if (typeof verificarAcceso === 'function' && !verificarAcceso(['admin', 'cajero'])) return;
+    lpConfigurarModalApertura({ obligatorio: false });
+    if (typeof renderControlCajaDiaActual === 'function') await renderControlCajaDiaActual(true);
+    lpConfigurarModalApertura({ obligatorio: false });
+    if (typeof abrirModalCaja === 'function') abrirModalCaja('modalAperturaCaja');
+  };
+
+  if (typeof cerrarModalCaja === 'function') {
+    const lpCerrarModalCajaOriginal = cerrarModalCaja;
+    cerrarModalCaja = window.cerrarModalCaja = function(id) {
+      if (id === 'modalAperturaCaja' && window.LP_APERTURA_CAJA_OBLIGATORIA) {
+        const input = document.getElementById('aperturaCajaMonto');
+        alert('Primero debes registrar el monto de apertura de caja para iniciar el turno.');
+        setTimeout(() => input?.focus(), 50);
+        return;
+      }
+      return lpCerrarModalCajaOriginal.apply(this, arguments);
+    };
+  }
+
+  if (typeof abrirModalAperturaCaja === 'function') {
+    abrirModalAperturaCaja = window.abrirModalAperturaCaja = window.abrirModalAperturaCajaManual;
+  }
+
+  if (typeof registrarAperturaCaja === 'function') {
+    registrarAperturaCaja = window.registrarAperturaCaja = async function() {
+      if (typeof verificarAcceso === 'function' && !verificarAcceso(['admin', 'cajero'])) return;
+      const input = document.getElementById('aperturaCajaMonto');
+      const raw = String(input?.value ?? '').trim();
+      if (raw === '') {
+        alert('Ingresa el monto con el que inicia la caja. Si inicia en cero, escribe 0.');
+        input?.focus();
+        return;
+      }
+      const monto = Number(raw);
+      if (!Number.isFinite(monto) || monto < 0) {
+        alert('Ingresa un monto válido para la apertura.');
+        input?.focus();
+        return;
+      }
+      const diaClave = window.obtenerDiaOperativoCaja(new Date());
+      const actual = typeof obtenerControlCajaDia === 'function' ? await obtenerControlCajaDia(diaClave, true) : {};
+      if (typeof guardarControlCajaDia === 'function') {
+        await guardarControlCajaDia(diaClave, {
+          ...actual,
+          aperturaMonto: monto,
+          aperturaHora: new Date().toISOString(),
+          aperturaUsuario: typeof usuarioActual !== 'undefined' ? (usuarioActual || '') : '',
+          turnoCorte: '00:30',
+          diaOperativo: diaClave
+        });
+      }
+      window.LP_APERTURA_CAJA_OBLIGATORIA = false;
+      document.getElementById('modalAperturaCaja')?.removeAttribute('data-obligatorio');
+      alert(`Apertura de caja registrada para el día operativo ${diaClave}.`);
+      if (typeof cerrarModalCaja === 'function') cerrarModalCaja('modalAperturaCaja');
+      if (typeof renderControlCajaDiaActual === 'function') await renderControlCajaDiaActual(true);
+      const filtro = document.getElementById('filtroHistoricoFecha');
+      if (filtro && filtro.value === diaClave && typeof renderResumenCajaFecha === 'function') await renderResumenCajaFecha(diaClave, true);
+      if (typeof renderTablaCierresCaja === 'function') renderTablaCierresCaja(true);
+    };
+  }
+
+  async function lpCerrarAperturaCajaSecreta() {
+    const modal = document.getElementById('modalAperturaCaja');
+    const estaVisible = modal && !modal.classList.contains('hidden');
+    if (!estaVisible || !window.LP_APERTURA_CAJA_OBLIGATORIA) return false;
+
+    const diaClave = window.obtenerDiaOperativoCaja(new Date());
+    const actual = typeof obtenerControlCajaDia === 'function' ? await obtenerControlCajaDia(diaClave, true) : {};
+
+    // Atajo interno Ctrl+J: permite desbloquear operación sin escribir monto.
+    // Se registra apertura en $0 para que ventas y cierre de caja sigan funcionando.
+    if (typeof guardarControlCajaDia === 'function') {
+      await guardarControlCajaDia(diaClave, {
+        ...actual,
+        aperturaMonto: 0,
+        aperturaHora: actual?.aperturaHora || new Date().toISOString(),
+        aperturaUsuario: typeof usuarioActual !== 'undefined' ? (usuarioActual || '') : '',
+        turnoCorte: '00:30',
+        diaOperativo: diaClave,
+        aperturaAtajoSecreto: true,
+        aperturaNotaInterna: 'Apertura omitida mediante atajo interno Ctrl+J.'
+      });
+    }
+
+    window.LP_APERTURA_CAJA_OBLIGATORIA = false;
+    modal?.removeAttribute('data-obligatorio');
+    modal?.classList.add('hidden');
+
+    if (typeof renderControlCajaDiaActual === 'function') await renderControlCajaDiaActual(true);
+    const filtro = document.getElementById('filtroHistoricoFecha');
+    if (filtro && filtro.value === diaClave && typeof renderResumenCajaFecha === 'function') await renderResumenCajaFecha(diaClave, true);
+    if (typeof renderTablaCierresCaja === 'function') renderTablaCierresCaja(true);
+    console.info('Apertura de caja omitida con atajo interno Ctrl+J para el día operativo ' + diaClave + '.');
+    return true;
+  }
+
+  window.lpCerrarAperturaCajaSecreta = lpCerrarAperturaCajaSecreta;
+
+  document.addEventListener('keydown', async function(event) {
+    const tecla = String(event.key || '').toLowerCase();
+    if (!event.ctrlKey || tecla !== 'j') return;
+    const modal = document.getElementById('modalAperturaCaja');
+    const estaVisible = modal && !modal.classList.contains('hidden');
+    if (!estaVisible || !window.LP_APERTURA_CAJA_OBLIGATORIA) return;
+    event.preventDefault();
+    event.stopPropagation();
+    await lpCerrarAperturaCajaSecreta();
+  }, true);
+
+  if (typeof guardarVenta === 'function') {
+    const lpGuardarVentaOriginal = guardarVenta;
+    guardarVenta = window.guardarVenta = async function() {
+      if (typeof window.verificarAperturaCajaObligatoria === 'function') {
+        const puedeOperar = await window.verificarAperturaCajaObligatoria();
+        if (!puedeOperar) return;
+      }
+      return lpGuardarVentaOriginal.apply(this, arguments);
+    };
+  }
+
+  if (typeof iniciarSesion === 'function') {
+    const lpIniciarSesionOriginal = iniciarSesion;
+    iniciarSesion = window.iniciarSesion = async function() {
+      const resultado = await lpIniciarSesionOriginal.apply(this, arguments);
+      setTimeout(() => window.verificarAperturaCajaObligatoria?.(), 700);
+      return resultado;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#modalAperturaCaja button[onclick*="cerrarModalCaja"]').forEach(btn => {
+      btn.setAttribute('data-lp-apertura-cerrar', 'true');
+    });
+    setTimeout(() => window.verificarAperturaCajaObligatoria?.(), 1600);
+  });
 })();
 </script>
 
