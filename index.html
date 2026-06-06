@@ -1047,7 +1047,7 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
           <input type="number" id="costoDomicilio" min="0" step="500" inputmode="numeric" placeholder="Ej: 3000" class="w-full p-3 border border-yellow-300 rounded-xl text-base" />
           <p class="mt-1 text-xs text-gray-500">Este valor lo asume el cliente y no se suma al total de la venta.</p>
         </div>
-        <input type="text" id="observaciones" placeholder="Observaciones (Ej: Sin cebolla, agregar salsas, etc.)" class="w-full p-3 border border-yellow-300 rounded-xl text-base" />
+        <input type="hidden" id="observaciones" value="" />
       </div>
 
       <div class="md:hidden mt-5 flex flex-col sm:flex-row gap-2 sm:justify-between">
@@ -5247,6 +5247,21 @@ function cancelarPedidoActual() {
 }
 
 
+
+  // Convierte las notas de cocina de cada producto en la observación general de la venta.
+  // Así se conserva la misma lógica de observaciones, pero sin usar el recuadro inferior.
+  function obtenerObservacionesPedidoActualDesdeNotas() {
+    if (!Array.isArray(pedido)) return '';
+    return pedido
+      .map((producto) => {
+        const nombre = String(producto?.nombre || 'Producto').trim();
+        const nota = String(producto?.nota || producto?.observacionProducto || producto?.observacion || '').trim();
+        return nota ? `${nombre}: ${nota}` : '';
+      })
+      .filter(Boolean)
+      .join('\n');
+  }
+
   // Guarda la venta en localStorage y actualiza la vista de ventas
   async function guardarVenta() {
     if (!verificarAcceso(["admin", "cajero"])) return;
@@ -5286,7 +5301,8 @@ function cancelarPedidoActual() {
     actualizarTotal();
     const infoDescuento = obtenerInfoDescuentoPedidoActual();
     const subtotalProductos = infoDescuento.subtotalNeto;
-    const observaciones = document.getElementById("observaciones").value.trim();
+    const observaciones = obtenerObservacionesPedidoActualDesdeNotas()
+      || String(document.getElementById("observaciones")?.value || "").trim();
     const totalCobrado = redondearPago(subtotalProductos + costoDomicilio);
     const detallePagos = construirDetallePagosVentaDesdeFormulario(formaPago, totalCobrado);
 
@@ -6493,19 +6509,33 @@ function construirListaProductosImpresion(venta = {}, resumido = false) {
   const pedidoImpresion = Array.isArray(venta?.pedido) ? venta.pedido : [];
   if (!pedidoImpresion.length) return '<li>Sin productos</li>';
 
+  const obtenerNotaProducto = (item = {}) => String(item?.nota || item?.observacionProducto || item?.observacion || '').trim();
+  const construirNotaHtml = (nota = '') => {
+    if (!nota) return '';
+    return `<span class="item-note">Nota cocina: ${escaparHTMLImpresion(nota).replace(/\n/g, '<br>')}</span>`;
+  };
+
   if (resumido) {
     const resumen = {};
     pedidoImpresion.forEach(item => {
-      const nombre = item?.nombre || 'Producto';
-      resumen[nombre] = (resumen[nombre] || 0) + 1;
+      const nombre = String(item?.nombre || 'Producto').trim();
+      const nota = obtenerNotaProducto(item);
+      const clave = `${nombre}__${nota}`;
+      if (!resumen[clave]) resumen[clave] = { nombre, nota, cantidad: 0 };
+      resumen[clave].cantidad += 1;
     });
-    return Object.entries(resumen)
-      .map(([producto, cantidad]) => `<li>${producto} x${cantidad}</li>`)
+    return Object.values(resumen)
+      .map(item => `<li>${escaparHTMLImpresion(item.nombre)} x${item.cantidad}${construirNotaHtml(item.nota)}</li>`)
       .join('');
   }
 
   return pedidoImpresion
-    .map(item => `<li>${item?.nombre || 'Producto'} - ${formatearCOP(item?.precio || 0)}</li>`)
+    .map(item => {
+      const nombre = escaparHTMLImpresion(item?.nombre || 'Producto');
+      const precio = formatearCOP(item?.precio || 0);
+      const nota = construirNotaHtml(obtenerNotaProducto(item));
+      return `<li>${nombre} - ${precio}${nota}</li>`;
+    })
     .join('');
 }
 
@@ -6779,6 +6809,14 @@ function generarPlantillaReciboCliente(venta = {}, referencia = 1) {
         li {
           margin-bottom: 6px;
         }
+        .item-note {
+          display: block;
+          margin-top: 2px;
+          padding-left: 8px;
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1.25;
+        }
         .total {
           text-align: right;
           font-weight: 700;
@@ -6889,6 +6927,14 @@ function generarPlantillaComanda(venta = {}, referencia = 1) {
           padding: 5px 0;
           border-bottom: 1px dashed #000;
           font-size: 18px;
+        }
+        .item-note {
+          display: block;
+          margin-top: 2px;
+          padding-left: 8px;
+          font-size: 14px;
+          font-weight: 700;
+          line-height: 1.25;
         }
         .footer-note {
           text-align: center;
@@ -10687,6 +10733,21 @@ function mostrarModuloIndependiente(nombreModulo) {
     });
     setTimeout(() => window.verificarAperturaCajaObligatoria?.(), 1600);
   });
+})();
+</script>
+
+<script>
+(function(){
+  function ocultarRecuadroObservacionesPedido(){
+    const obs = document.getElementById('observaciones');
+    if (!obs) return;
+    obs.type = 'hidden';
+    obs.className = 'hidden';
+    obs.placeholder = '';
+    obs.setAttribute('aria-hidden', 'true');
+  }
+  document.addEventListener('DOMContentLoaded', ocultarRecuadroObservacionesPedido);
+  setTimeout(ocultarRecuadroObservacionesPedido, 800);
 })();
 </script>
 
