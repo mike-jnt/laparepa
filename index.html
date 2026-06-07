@@ -5397,14 +5397,7 @@ function cancelarPedidoActual() {
 
     if (popupImpresionCocina) {
       try {
-        popupImpresionCocina.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Preparando recibo cocina</title></head><body style="font-family:sans-serif;padding:16px;">Preparando recibo de cocina...
-<script id="lp-inventario-separado-helper">
-  function abrirInventarioVista() {
-    window.location.href = 'inventario.html';
-  }
-</script>
-
-</body></html>');
+        popupImpresionCocina.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Preparando recibo cocina</title></head><body style="font-family:sans-serif;padding:16px;">Preparando recibo de cocina...</body></html>');
         popupImpresionCocina.document.close();
       } catch (_) {}
     }
@@ -6926,14 +6919,7 @@ function generarPlantillaReciboCliente(venta = {}, referencia = 1) {
       </div>
       <div class="line"></div>
       <p class="thanks">¡Gracias por su compra!</p>
-    
-<script id="lp-inventario-separado-helper">
-  function abrirInventarioVista() {
-    window.location.href = 'inventario.html';
-  }
-</script>
-
-</body>
+    </body>
   </html>`;
 }
 
@@ -7034,14 +7020,7 @@ function generarPlantillaComanda(venta = {}, referencia = 1) {
       </ul>
       ${costoDomicilio > 0 ? `<div class="line"></div><div class="extra"><p><strong>Costo domicilio:</strong> ${formatearCOP(costoDomicilio)}</p></div>` : ''}
       <p class="footer-note">👨‍🍳 Preparar con cuidado</p>
-    
-<script id="lp-inventario-separado-helper">
-  function abrirInventarioVista() {
-    window.location.href = 'inventario.html';
-  }
-</script>
-
-</body>
+    </body>
   </html>`;
 }
 
@@ -9457,14 +9436,7 @@ function mostrarModuloIndependiente(nombreModulo) {
         <table><thead><tr><th>Pedido</th><th>Cliente</th><th>Tipo</th><th>Pago</th><th>Estado</th><th>Total</th></tr></thead><tbody>
           ${r.ventas.map(v => `<tr><td>#${v.comanda || v.recibo || "-"}</td><td>${v.cliente || ""}</td><td>${v.tipoPedido || ""}</td><td>${v.formaPago || ""}</td><td>${getEstadoPedido(v)}</td><td>${money(amountVenta(v))}</td></tr>`).join("") || "<tr><td colspan='6'>Sin ventas</td></tr>"}
         </tbody></table>
-      
-<script id="lp-inventario-separado-helper">
-  function abrirInventarioVista() {
-    window.location.href = 'inventario.html';
-  }
-</script>
-
-</body></html>
+      </body></html>
     `);
     win.document.close();
     setTimeout(() => win.print(), 300);
@@ -10876,11 +10848,10 @@ function mostrarModuloIndependiente(nombreModulo) {
   });
 </script>
 
-<script id="lp-inventario-separado-helper">
-  function abrirInventarioVista() {
+<script id="lp-inventario-link-helper">
+  window.abrirInventarioVista = function abrirInventarioVista() {
     window.location.href = 'inventario.html';
-  }
+  };
 </script>
-
 </body>
 </html>
