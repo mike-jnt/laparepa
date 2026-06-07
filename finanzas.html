@@ -548,6 +548,184 @@ body.dark-mode .pago-nomina-card .value {
     color: #fff4df !important;
   }
 
+
+
+  /* ===== Ajuste final de contraste La Parepa =====
+     Se eliminan recuadros blancos planos y se asegura lectura en tablas/tarjetas. */
+  .seccion-tabla,
+  .bloque-analitico {
+    background: linear-gradient(135deg, #fff4df 0%, #ffe9c7 100%) !important;
+    color: var(--lp-text) !important;
+    border: 1px solid rgba(228, 20, 36, 0.24) !important;
+  }
+
+  .seccion-agregar,
+  .seccion-filtro,
+  .subseccion,
+  .pago-nomina-card {
+    background: linear-gradient(135deg, #fff8ec 0%, #ffeacd 100%) !important;
+    color: var(--lp-text) !important;
+    border: 1px solid rgba(228, 20, 36, 0.20) !important;
+  }
+
+  .tabla-container {
+    background: #fff8ec !important;
+    border: 1px solid rgba(228, 20, 36, 0.18) !important;
+    border-radius: 18px !important;
+    padding: 8px !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.55) !important;
+  }
+
+  .table {
+    --bs-table-bg: transparent !important;
+    --bs-table-color: var(--lp-text) !important;
+    background: #fffaf2 !important;
+    color: var(--lp-text) !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    margin-bottom: 0 !important;
+  }
+
+  .table tbody tr,
+  .table tbody td,
+  .table tbody th {
+    background-color: #fffaf2 !important;
+    color: var(--lp-text) !important;
+    vertical-align: middle !important;
+  }
+
+  .table tbody tr:nth-child(even) td,
+  .table tbody tr:nth-child(even) th {
+    background-color: #fff2df !important;
+  }
+
+  .table-hover tbody tr:hover td,
+  .table-hover tbody tr:hover th {
+    background-color: #fde7e9 !important;
+    color: var(--lp-red-dark) !important;
+  }
+
+  .table-light,
+  .table-light th,
+  thead.table-light th,
+  .table thead th {
+    background: linear-gradient(135deg, var(--lp-red), var(--lp-red-dark)) !important;
+    color: #ffffff !important;
+    border-color: rgba(255,255,255,0.22) !important;
+    font-weight: 900 !important;
+  }
+
+  .table td,
+  .table th {
+    border-color: rgba(228, 20, 36, 0.18) !important;
+  }
+
+  .form-label,
+  label {
+    color: #5b2522 !important;
+    font-weight: 800 !important;
+  }
+
+  .form-control,
+  .form-select,
+  textarea.form-control {
+    background-color: #fffaf2 !important;
+    color: var(--lp-text) !important;
+    border-color: rgba(228, 20, 36, 0.25) !important;
+  }
+
+  .form-control::placeholder,
+  textarea.form-control::placeholder {
+    color: #9b7166 !important;
+    opacity: 1 !important;
+  }
+
+  #vistaFoto,
+  .bg-light {
+    background: #fff4df !important;
+    color: var(--lp-text) !important;
+    border-color: rgba(228, 20, 36, 0.22) !important;
+  }
+
+  .text-muted,
+  .small.text-muted {
+    color: #6f4f47 !important;
+    font-weight: 600 !important;
+  }
+
+  .subseccion canvas {
+    background: #fffaf2 !important;
+    border: 1px solid rgba(228, 20, 36, 0.12) !important;
+    border-radius: 16px !important;
+    padding: 8px !important;
+  }
+
+  .badge.text-bg-warning {
+    background: #fde7e9 !important;
+    color: var(--lp-red-dark) !important;
+    border: 1px solid rgba(228, 20, 36, 0.22) !important;
+  }
+
+  .btn-success {
+    background-color: #198754 !important;
+    border-color: #198754 !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+  }
+
+  .btn-success:hover {
+    background-color: #146c43 !important;
+    border-color: #146c43 !important;
+  }
+
+  .btn-danger,
+  .btn-outline-danger:hover {
+    background-color: var(--lp-red) !important;
+    border-color: var(--lp-red) !important;
+    color: #ffffff !important;
+  }
+
+  .btn-outline-danger {
+    color: var(--lp-red) !important;
+    border-color: var(--lp-red) !important;
+    background: #fffaf2 !important;
+    font-weight: 800 !important;
+  }
+
+  body.dark-mode .seccion-tabla,
+  body.dark-mode .bloque-analitico,
+  body.dark-mode .seccion-agregar,
+  body.dark-mode .seccion-filtro,
+  body.dark-mode .subseccion,
+  body.dark-mode .pago-nomina-card,
+  body.dark-mode .tabla-container {
+    background: #2b1815 !important;
+    color: #fff4df !important;
+  }
+
+  body.dark-mode .table,
+  body.dark-mode .table tbody tr,
+  body.dark-mode .table tbody td,
+  body.dark-mode .table tbody th {
+    background: #351f1b !important;
+    color: #fff4df !important;
+  }
+
+  body.dark-mode .table tbody tr:nth-child(even) td,
+  body.dark-mode .table tbody tr:nth-child(even) th {
+    background: #402720 !important;
+  }
+
+  body.dark-mode .form-control,
+  body.dark-mode .form-select,
+  body.dark-mode textarea.form-control,
+  body.dark-mode #vistaFoto,
+  body.dark-mode .bg-light {
+    background: #351f1b !important;
+    color: #fff4df !important;
+    border-color: rgba(248, 223, 184, 0.22) !important;
+  }
+
   @media (max-width: 767px) {
     .lp-header-inner {
       align-items: stretch;
