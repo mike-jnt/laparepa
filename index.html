@@ -771,7 +771,7 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
         <button type="button" onclick="abrirModalAperturaCajaManual()" class="bg-green-600 text-white font-bold px-3 py-2 rounded-lg shadow hover:bg-green-700 transition text-center">
           💰 Abrir caja
         </button>
-        <button type="button" onclick="abrirInventarioVista()" data-role="gestion-only" class="bg-yellow-600 text-white font-semibold px-3 py-2 rounded-lg shadow hover:bg-yellow-700 transition text-center">
+        <button type="button" onclick="window.location.href='inventario.html'" data-role="gestion-only" class="bg-yellow-600 text-white font-semibold px-3 py-2 rounded-lg shadow hover:bg-yellow-700 transition text-center">
           📆 Inventario
         </button>
         <button type="button" onclick="abrirEditorCatalogo()" data-role="gestion-only" class="bg-white text-yellow-700 font-semibold px-3 py-2 rounded-lg shadow hover:bg-yellow-100 transition text-center">
@@ -814,7 +814,7 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
           <button type="button" onclick="cerrarMobileMenu(); mostrarModuloIndependiente('Nómina');" data-role="gestion-only" class="menu-link-text admin">👥 Nómina</button>
           <button type="button" onclick="abrirHistoricos(); cerrarMobileMenu();" data-role="gestion-only" class="menu-link-text admin">📈 Históricos</button>
           <button type="button" onclick="abrirDomiciliosVista(); cerrarMobileMenu();" data-role="gestion-only" class="menu-link-text admin">🛵 Domicilios</button>
-          <button type="button" onclick="cerrarMobileMenu(); abrirInventarioVista();" data-role="gestion-only" class="menu-link-text admin">📆 Inventario</button>
+          <button type="button" onclick="cerrarMobileMenu(); window.location.href='inventario.html';" data-role="gestion-only" class="menu-link-text admin">📆 Inventario</button>
           <button type="button" onclick="cerrarMobileMenu(); abrirEditorCatalogo();" data-role="gestion-only" class="menu-link-text admin">🖼️ Menú digital</button>
           <button type="button" onclick="scrollToPedidosCatalogo(); cerrarMobileMenu();" class="menu-link-text">📲 Pedidos catálogo</button>
           <button type="button" onclick="abrirGeneradorQRMesas(); cerrarMobileMenu();" data-role="gestion-only" class="menu-link-text admin">🔳 QR mesas</button>
@@ -1758,92 +1758,6 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
   </main>
 
 
-  <main id="inventarioVista" data-role="gestion-only" class="p-4 md:p-6 hidden">
-    <div class="max-w-7xl mx-auto space-y-6">
-      <div class="bg-white/90 border border-yellow-100 rounded-3xl shadow-xl p-5 md:p-6">
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <p class="text-sm uppercase tracking-wide text-yellow-700 font-black">Inventario conectado</p>
-            <h2 class="text-2xl md:text-3xl font-black text-gray-900">📦 Inventario La Parepa</h2>
-            <p class="text-sm text-gray-500 max-w-3xl">Controla productos, entradas y salidas. Las bebidas usan la misma base de datos del POS para descontar stock cuando se guarda una venta.</p>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button type="button" onclick="volverAlPOS()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-xl font-bold">← Volver al POS</button>
-            <button type="button" onclick="invRefrescarInventario()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-xl font-bold shadow">Actualizar</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white border border-yellow-100 rounded-3xl shadow-md p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <span id="invDbStatusDot" class="w-4 h-4 rounded-full bg-amber-400 shadow-[0_0_0_6px_rgba(245,158,11,.15)]"></span>
-          <div>
-            <p id="invDbStatusText" class="font-black text-gray-800">Verificando conexión...</p>
-            <p id="invDbStatusSubtext" class="text-sm text-gray-500">Comprobando sincronización con Firebase.</p>
-          </div>
-        </div>
-        <span id="invDbStatusMeta" class="text-xs font-black bg-yellow-50 text-yellow-800 border border-yellow-200 px-3 py-1 rounded-full">Modo: verificando</span>
-      </div>
-
-      <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <section class="bg-white border border-yellow-100 rounded-3xl shadow-md p-5">
-          <h3 class="text-xl font-black text-gray-900 mb-2">➕ Agregar producto</h3>
-          <p class="text-sm text-gray-500 mb-4">Puedes crear productos manuales o escoger una bebida del menú actual.</p>
-          <label for="invBebidaMenuSelect" class="block text-sm font-black text-yellow-800 mb-1">Bebidas del menú La Parepa</label>
-          <select id="invBebidaMenuSelect" onchange="invAplicarBebidaSeleccionada()" class="w-full rounded-2xl border border-yellow-200 bg-yellow-50/70 px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-yellow-400">
-            <option value="">Selecciona una bebida del menú</option>
-          </select>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-            <button type="button" onclick="invAgregarBebidaMenuRapida()" class="bg-yellow-500 hover:bg-yellow-600 text-white rounded-2xl px-4 py-3 font-black shadow">Agregar bebida</button>
-            <button type="button" onclick="invSincronizarBebidasMenuFaltantes()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-2xl px-4 py-3 font-black">Crear faltantes</button>
-          </div>
-          <input type="text" id="invNombreProducto" placeholder="Nombre del producto" class="w-full rounded-2xl border border-yellow-200 px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-yellow-400" />
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <input type="number" id="invCantidadInicial" placeholder="Cantidad inicial" class="rounded-2xl border border-yellow-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-yellow-400" />
-            <select id="invUnidadMedida" class="rounded-2xl border border-yellow-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-yellow-400">
-              <option value="unidades">Unidades</option>
-              <option value="kg">Kilogramos</option>
-              <option value="g">Gramos</option>
-              <option value="L">Litros</option>
-              <option value="ml">Mililitros</option>
-            </select>
-            <input type="date" id="invFechaIngresoProducto" class="rounded-2xl border border-yellow-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-yellow-400" />
-          </div>
-          <button type="button" onclick="invAgregarProducto()" class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white rounded-2xl px-4 py-3 font-black shadow">Guardar producto</button>
-        </section>
-
-        <section class="bg-white border border-yellow-100 rounded-3xl shadow-md p-5">
-          <h3 class="text-xl font-black text-gray-900 mb-2">🔄 Actualizar stock</h3>
-          <p class="text-sm text-gray-500 mb-4">Registra ingresos o salidas manuales del inventario.</p>
-          <select id="invProductoSeleccionado" class="w-full rounded-2xl border border-yellow-200 px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-yellow-400"></select>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input type="number" id="invCantidadMovimiento" placeholder="Cantidad" class="rounded-2xl border border-yellow-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-yellow-400" />
-            <input type="date" id="invFechaMovimientoStock" class="rounded-2xl border border-yellow-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-yellow-400" />
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-            <button type="button" onclick="invActualizarStock('salida')" class="bg-red-600 hover:bg-red-700 text-white rounded-2xl px-4 py-3 font-black shadow">Usar producto</button>
-            <button type="button" onclick="invActualizarStock('ingreso')" class="bg-green-600 hover:bg-green-700 text-white rounded-2xl px-4 py-3 font-black shadow">Ingresar producto</button>
-          </div>
-        </section>
-      </div>
-
-      <section class="bg-white border border-yellow-100 rounded-3xl shadow-md p-5">
-        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-4">
-          <div>
-            <h3 class="text-xl font-black text-gray-900">📋 Inventario actual</h3>
-            <p class="text-sm text-gray-500">Los productos marcados como bebida están conectados con las ventas del POS.</p>
-          </div>
-          <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-            <input type="text" id="invBuscadorInventario" oninput="invFiltrarInventario()" placeholder="🔍 Buscar producto..." class="w-full lg:w-80 rounded-2xl border border-yellow-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-yellow-400" />
-            <button type="button" onclick="invExportarInventarioPDF()" class="bg-gray-900 hover:bg-black text-white rounded-2xl px-4 py-3 font-black shadow">PDF</button>
-          </div>
-        </div>
-        <div id="invListaInventario" class="space-y-3"></div>
-      </section>
-    </div>
-  </main>
-
-
 
   <!-- Modal generador QR mesas -->
   <div id="modalQRMesas" class="fixed inset-0 bg-black/50 z-[90] hidden items-center justify-center p-4">
@@ -2280,8 +2194,7 @@ function ocultarVistasPrincipalesLaParepa() {
     'historicosVista',
     'cajaVista',
     'domiciliosVista',
-    'menuDigitalVista',
-    'inventarioVista'
+    'menuDigitalVista'
   ].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
@@ -5484,7 +5397,14 @@ function cancelarPedidoActual() {
 
     if (popupImpresionCocina) {
       try {
-        popupImpresionCocina.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Preparando recibo cocina</title></head><body style="font-family:sans-serif;padding:16px;">Preparando recibo de cocina...</body></html>');
+        popupImpresionCocina.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Preparando recibo cocina</title></head><body style="font-family:sans-serif;padding:16px;">Preparando recibo de cocina...
+<script id="lp-inventario-separado-helper">
+  function abrirInventarioVista() {
+    window.location.href = 'inventario.html';
+  }
+</script>
+
+</body></html>');
         popupImpresionCocina.document.close();
       } catch (_) {}
     }
@@ -7006,7 +6926,14 @@ function generarPlantillaReciboCliente(venta = {}, referencia = 1) {
       </div>
       <div class="line"></div>
       <p class="thanks">¡Gracias por su compra!</p>
-    </body>
+    
+<script id="lp-inventario-separado-helper">
+  function abrirInventarioVista() {
+    window.location.href = 'inventario.html';
+  }
+</script>
+
+</body>
   </html>`;
 }
 
@@ -7107,7 +7034,14 @@ function generarPlantillaComanda(venta = {}, referencia = 1) {
       </ul>
       ${costoDomicilio > 0 ? `<div class="line"></div><div class="extra"><p><strong>Costo domicilio:</strong> ${formatearCOP(costoDomicilio)}</p></div>` : ''}
       <p class="footer-note">👨‍🍳 Preparar con cuidado</p>
-    </body>
+    
+<script id="lp-inventario-separado-helper">
+  function abrirInventarioVista() {
+    window.location.href = 'inventario.html';
+  }
+</script>
+
+</body>
   </html>`;
 }
 
@@ -7273,12 +7207,10 @@ async function abrirHistoricos() {
   const cajaVista = document.getElementById("cajaVista");
   const domiciliosVista = document.getElementById("domiciliosVista");
   const menuDigitalVista = document.getElementById("menuDigitalVista");
-  const inventarioVista = document.getElementById("inventarioVista");
   if (appMain) appMain.classList.add("hidden");
   if (cajaVista) cajaVista.classList.add("hidden");
   if (domiciliosVista) domiciliosVista.classList.add("hidden");
   if (menuDigitalVista) menuDigitalVista.classList.add("hidden");
-  if (inventarioVista) inventarioVista.classList.add("hidden");
   if (historicosVista) historicosVista.classList.remove("hidden");
   actualizarHistoricos();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -7291,12 +7223,10 @@ async function abrirCajaVista() {
   const cajaVista = document.getElementById("cajaVista");
   const domiciliosVista = document.getElementById("domiciliosVista");
   const menuDigitalVista = document.getElementById("menuDigitalVista");
-  const inventarioVista = document.getElementById("inventarioVista");
   if (appMain) appMain.classList.add("hidden");
   if (historicosVista) historicosVista.classList.add("hidden");
   if (domiciliosVista) domiciliosVista.classList.add("hidden");
   if (menuDigitalVista) menuDigitalVista.classList.add("hidden");
-  if (inventarioVista) inventarioVista.classList.add("hidden");
   if (cajaVista) cajaVista.classList.remove("hidden");
   await renderControlCajaDiaActual(true);
   await renderTablaCierresCaja(true);
@@ -7313,7 +7243,6 @@ function volverAlPOS() {
   if (cajaVista) cajaVista.classList.add("hidden");
   if (domiciliosVista) domiciliosVista.classList.add("hidden");
   if (menuDigitalVista) menuDigitalVista.classList.add("hidden");
-  if (inventarioVista) inventarioVista.classList.add("hidden");
   if (appMain) appMain.classList.remove("hidden");
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -8443,12 +8372,10 @@ function volverAlPOS() {
     const cajaVista = document.getElementById('cajaVista');
     const domiciliosVista = document.getElementById('domiciliosVista');
     const menuDigitalVista = document.getElementById('menuDigitalVista');
-    const inventarioVista = document.getElementById('inventarioVista');
     if (appMain) appMain.classList.add('hidden');
     if (historicosVista) historicosVista.classList.add('hidden');
     if (cajaVista) cajaVista.classList.add('hidden');
     if (menuDigitalVista) menuDigitalVista.classList.add('hidden');
-    if (inventarioVista) inventarioVista.classList.add('hidden');
     if (domiciliosVista) domiciliosVista.classList.remove('hidden');
     actualizarDomiciliosVista();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -8473,458 +8400,8 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 
 
-
-<script id="la-parepa-inventario-integrado">
-(function() {
-  const INV_FALLBACK_BEBIDAS = [{"nombre": "QUATRO", "precio": 4000}, {"nombre": "COCA COLA 400 ml", "precio": 4000}, {"nombre": "COCA COLA 250 ml", "precio": 3000}, {"nombre": "JUGO HIT 500 ml", "precio": 4000}, {"nombre": "SPRITE", "precio": 4000}, {"nombre": "COCA COLA ZERO", "precio": 4000}, {"nombre": "BRISA LIMON", "precio": 4000}, {"nombre": "BRISA MANZANA", "precio": 4000}, {"nombre": "MISTER TEA", "precio": 4000}, {"nombre": "AGUA CON GAS", "precio": 4000}, {"nombre": "AGUA SABORISADA", "precio": 4000}, {"nombre": "POSTOBON 400 ml", "precio": 4000}, {"nombre": "POSTOBON 250 ml", "precio": 3000}, {"nombre": "POSTOBON 1.5", "precio": 9000}, {"nombre": "SODA BRETAÑA", "precio": 4500}, {"nombre": "GATORADE", "precio": 6000}, {"nombre": "PREMIO 400 ml", "precio": 4000}, {"nombre": "PREMIO 1.5l", "precio": 9000}, {"nombre": "QUATRO 1.5L", "precio": 9000}, {"nombre": "COCA COLA 1.5L", "precio": 9000}, {"nombre": "JUGO HIT 1.L", "precio": 7500}, {"nombre": "SPRITE 1.5L", "precio": 9000}, {"nombre": "COCA COLA ZERO 1.5L", "precio": 9000}, {"nombre": "AGUA", "precio": 3000}, {"nombre": "MILO CALIENTE", "precio": 6000}, {"nombre": "CAFE CON LECHE", "precio": 5000}, {"nombre": "TINTO", "precio": 4000}, {"nombre": "CERVEZA POKER", "precio": 6000}, {"nombre": "CERVEZA CORONA", "precio": 6000}];
-  let invGestionInventario = [];
-  let invGestionUnsubscribe = null;
-  let invCatalogoUnsubscribe = null;
-  let invAuthListenerInstalado = false;
-  let invBebidasMenu = INV_FALLBACK_BEBIDAS.slice();
-  const INV_STOCK_BAJO_UMBRAL = 5;
-
-  function invStorageKey() {
-    return typeof INVENTARIO_STORAGE_KEY !== 'undefined' ? INVENTARIO_STORAGE_KEY : 'inventarioCocina';
-  }
-
-  function invCollectionName() {
-    return typeof INVENTARIO_COLLECTION !== 'undefined' ? INVENTARIO_COLLECTION : 'inventario';
-  }
-
-  function invFechaHoy() {
-    if (typeof obtenerFechaLocalISO === 'function') return obtenerFechaLocalISO(new Date());
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-  }
-
-  function invMoney(valor) {
-    if (typeof formatearPesos === 'function') return formatearPesos(valor);
-    return '$' + Number(valor || 0).toLocaleString('es-CO');
-  }
-
-  function invClave(nombre = '') {
-    if (typeof normalizarClaveInventario === 'function') return normalizarClaveInventario(nombre);
-    return String(nombre || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '').trim();
-  }
-
-  function invEsc(valor = '') {
-    if (typeof escaparHTML === 'function') return escaparHTML(valor);
-    return String(valor || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-
-  function invEsBebidaMenu(nombre = '') {
-    const clave = invClave(nombre);
-    return invBebidasMenu.some(item => invClave(item.nombre || item) === clave);
-  }
-
-  function invNormalizarItem(item = {}, fallbackId = '') {
-    const nombre = String(item.nombre || '').trim();
-    const nombreNormalizado = invClave(item.nombreNormalizado || nombre);
-    const esBebida = item.categoria === 'bebida' || item.origen === 'menu-bebidas' || invEsBebidaMenu(nombre);
-    return {
-      id: item.id || fallbackId || `${String(nombre || 'producto').toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-      nombre,
-      nombreNormalizado,
-      cantidad: Number(item.cantidad || 0),
-      unidad: esBebida ? 'unidades' : (item.unidad || 'unidades'),
-      fecha: item.fecha || invFechaHoy(),
-      categoria: esBebida ? 'bebida' : (item.categoria || 'general'),
-      origen: esBebida ? 'menu-bebidas' : (item.origen || 'manual'),
-      actualizadoEn: item.actualizadoEn || new Date().toISOString()
-    };
-  }
-
-  function invActualizarIndicador(estado, detalle = '') {
-    const dot = document.getElementById('invDbStatusDot');
-    const text = document.getElementById('invDbStatusText');
-    const sub = document.getElementById('invDbStatusSubtext');
-    const meta = document.getElementById('invDbStatusMeta');
-    if (!dot || !text || !sub || !meta) return;
-    dot.className = 'w-4 h-4 rounded-full';
-    if (estado === 'conectado') {
-      dot.className += ' bg-green-500 shadow-[0_0_0_6px_rgba(34,197,94,.15)]';
-      text.textContent = 'Conectado con Firebase La Parepa';
-      sub.textContent = detalle || 'El inventario está usando la misma base de datos del POS.';
-      meta.textContent = 'Modo: nube';
-      meta.className = 'text-xs font-black bg-green-50 text-green-800 border border-green-200 px-3 py-1 rounded-full';
-    } else if (estado === 'verificando') {
-      dot.className += ' bg-amber-400 shadow-[0_0_0_6px_rgba(245,158,11,.15)]';
-      text.textContent = 'Verificando conexión...';
-      sub.textContent = detalle || 'Comprobando sincronización con Firebase.';
-      meta.textContent = 'Modo: verificando';
-      meta.className = 'text-xs font-black bg-yellow-50 text-yellow-800 border border-yellow-200 px-3 py-1 rounded-full';
-    } else {
-      dot.className += ' bg-red-500 shadow-[0_0_0_6px_rgba(239,68,68,.15)]';
-      text.textContent = 'Sin conexión con Firebase';
-      sub.textContent = detalle || 'Se muestra una copia local temporal.';
-      meta.textContent = 'Modo: local';
-      meta.className = 'text-xs font-black bg-red-50 text-red-800 border border-red-200 px-3 py-1 rounded-full';
-    }
-  }
-
-  function invGuardarLocal() {
-    try { localStorage.setItem(invStorageKey(), JSON.stringify(invGestionInventario)); } catch (e) { console.warn('No se pudo guardar inventario local:', e); }
-  }
-
-  function invCargarLocal() {
-    try {
-      invGestionInventario = JSON.parse(localStorage.getItem(invStorageKey()) || '[]').map(invNormalizarItem);
-    } catch (e) {
-      invGestionInventario = [];
-    }
-  }
-
-  function invDbDisponible() {
-    return Boolean(typeof firestoreDisponible !== 'undefined' && firestoreDisponible && firestoreDb && firebaseAuth && firebaseAuth.currentUser);
-  }
-
-  function invActualizarBebidasDesdeCatalogo(catalogo = null) {
-    const origen = catalogo || (typeof catalogoProductos !== 'undefined' ? catalogoProductos : null);
-    const bebidas = (origen?.bebidas || [])
-      .filter(item => item && item.activo !== false && String(item.nombre || '').trim())
-      .map(item => ({ nombre: String(item.nombre || '').trim(), precio: Number(item.precio || 0) }));
-    invBebidasMenu = bebidas.length ? bebidas : INV_FALLBACK_BEBIDAS.slice();
-    invCargarOpcionesBebidasMenu();
-  }
-
-  function invEscucharCatalogoBebidas() {
-    invActualizarBebidasDesdeCatalogo();
-    if (!invDbDisponible()) return;
-    try {
-      if (typeof invCatalogoUnsubscribe === 'function') invCatalogoUnsubscribe();
-      const col = typeof CATALOGO_FIRESTORE_COLLECTION !== 'undefined' ? CATALOGO_FIRESTORE_COLLECTION : 'configuracion';
-      const docId = typeof CATALOGO_FIRESTORE_DOC_ID !== 'undefined' ? CATALOGO_FIRESTORE_DOC_ID : 'catalogoProductos';
-      invCatalogoUnsubscribe = firestoreDb.collection(col).doc(docId).onSnapshot((doc) => {
-        if (doc.exists) invActualizarBebidasDesdeCatalogo(doc.data());
-      });
-    } catch (e) {
-      console.warn('No se pudo escuchar el catálogo para inventario:', e);
-    }
-  }
-
-  function invCargarOpcionesBebidasMenu() {
-    const select = document.getElementById('invBebidaMenuSelect');
-    if (!select) return;
-    const actual = select.value;
-    select.innerHTML = '<option value="">Selecciona una bebida del menú</option>';
-    invBebidasMenu.forEach(item => {
-      const nombre = item.nombre || item;
-      const option = document.createElement('option');
-      option.value = nombre;
-      option.textContent = `${nombre}${Number(item.precio || 0) ? ' · ' + invMoney(item.precio) : ''}`;
-      select.appendChild(option);
-    });
-    if (actual && invBebidasMenu.some(item => (item.nombre || item) === actual)) select.value = actual;
-  }
-
-  window.invAplicarBebidaSeleccionada = function() {
-    const select = document.getElementById('invBebidaMenuSelect');
-    const nombre = document.getElementById('invNombreProducto');
-    const unidad = document.getElementById('invUnidadMedida');
-    if (!select?.value || !nombre || !unidad) return;
-    nombre.value = select.value;
-    unidad.value = 'unidades';
-  };
-
-  function invLimpiarFormulario() {
-    ['invNombreProducto', 'invCantidadInicial', 'invFechaIngresoProducto'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-    const unidad = document.getElementById('invUnidadMedida');
-    const select = document.getElementById('invBebidaMenuSelect');
-    if (unidad) unidad.value = 'unidades';
-    if (select) select.value = '';
-  }
-
-  async function invGuardarProductoFirestore(item) {
-    if (!invDbDisponible()) throw new Error('Firebase no disponible');
-    const producto = invNormalizarItem(item, item.id);
-    const payload = {
-      nombre: producto.nombre,
-      nombreNormalizado: producto.nombreNormalizado,
-      cantidad: producto.cantidad,
-      unidad: producto.unidad,
-      fecha: producto.fecha,
-      categoria: producto.categoria,
-      origen: producto.origen,
-      actualizadoEn: producto.actualizadoEn,
-      actualizadoPor: String(localStorage.getItem('usuarioEmailActual') || firebaseAuth.currentUser?.email || '')
-    };
-
-    if (producto.id) {
-      await firestoreDb.collection(invCollectionName()).doc(producto.id).set(payload, { merge: true });
-      return producto.id;
-    }
-
-    const existente = await firestoreDb.collection(invCollectionName()).where('nombreNormalizado', '==', producto.nombreNormalizado).limit(1).get();
-    if (!existente.empty) {
-      const doc = existente.docs[0];
-      await firestoreDb.collection(invCollectionName()).doc(doc.id).set(payload, { merge: true });
-      return doc.id;
-    }
-    const ref = await firestoreDb.collection(invCollectionName()).add(payload);
-    return ref.id;
-  }
-
-  async function invPersistir(item, indexLocal = null, opciones = {}) {
-    const { sumarSiExiste = indexLocal === null, silencioso = false } = opciones;
-    let producto = invNormalizarItem(item, item.id);
-    const indexDuplicado = invGestionInventario.findIndex((registro, idx) => idx !== indexLocal && invClave(registro.nombreNormalizado || registro.nombre) === producto.nombreNormalizado);
-
-    if (indexLocal !== null && indexDuplicado >= 0) {
-      if (!silencioso) alert('Ya existe un producto con ese nombre.');
-      return false;
-    }
-    if (indexLocal === null && sumarSiExiste && indexDuplicado >= 0) {
-      const existente = invNormalizarItem(invGestionInventario[indexDuplicado], invGestionInventario[indexDuplicado].id);
-      producto = { ...existente, ...producto, id: existente.id, cantidad: Number(existente.cantidad || 0) + Number(producto.cantidad || 0), fecha: producto.fecha || invFechaHoy() };
-      indexLocal = indexDuplicado;
-    }
-
-    try {
-      if (invDbDisponible()) {
-        producto.id = await invGuardarProductoFirestore(producto);
-      } else {
-        if (indexLocal !== null && indexLocal >= 0) invGestionInventario[indexLocal] = producto;
-        else invGestionInventario.push(producto);
-        invGuardarLocal();
-      }
-    } catch (error) {
-      console.error('No se pudo guardar inventario en Firebase:', error);
-      invActualizarIndicador('desconectado', 'No se pudo guardar en Firebase. Se guardó localmente.');
-      if (indexLocal !== null && indexLocal >= 0) invGestionInventario[indexLocal] = producto;
-      else invGestionInventario.push(producto);
-      invGuardarLocal();
-    }
-    invRenderInventario();
-    if (typeof escucharInventarioFirestore === 'function') escucharInventarioFirestore();
-    return true;
-  }
-
-  window.invAgregarBebidaMenuRapida = async function() {
-    const select = document.getElementById('invBebidaMenuSelect');
-    const cantidad = document.getElementById('invCantidadInicial');
-    if (!select?.value) return alert('Selecciona una bebida del menú.');
-    if (!cantidad?.value) return alert('Ingresa la cantidad inicial.');
-    window.invAplicarBebidaSeleccionada();
-    await window.invAgregarProducto();
-  };
-
-  window.invSincronizarBebidasMenuFaltantes = async function() {
-    const fecha = document.getElementById('invFechaIngresoProducto')?.value || invFechaHoy();
-    let creadas = 0;
-    for (const item of invBebidasMenu) {
-      const nombre = item.nombre || item;
-      const existe = invGestionInventario.some(reg => invClave(reg.nombreNormalizado || reg.nombre) === invClave(nombre));
-      if (existe) continue;
-      const ok = await invPersistir({ nombre, cantidad: 0, unidad: 'unidades', fecha, categoria: 'bebida', origen: 'menu-bebidas' }, null, { sumarSiExiste: false, silencioso: true });
-      if (ok) creadas += 1;
-    }
-    alert(creadas ? `Se crearon ${creadas} bebida(s) faltante(s) del menú.` : 'Todas las bebidas del menú ya existen en inventario.');
-  };
-
-  window.invAgregarProducto = async function() {
-    const select = document.getElementById('invBebidaMenuSelect');
-    const nombre = (document.getElementById('invNombreProducto')?.value.trim() || select?.value || '').trim();
-    const cantidad = Number(document.getElementById('invCantidadInicial')?.value);
-    const fecha = document.getElementById('invFechaIngresoProducto')?.value || invFechaHoy();
-    const unidad = invEsBebidaMenu(nombre) ? 'unidades' : (document.getElementById('invUnidadMedida')?.value || 'unidades');
-    if (!nombre || Number.isNaN(cantidad) || cantidad < 0) return alert('Completa nombre y cantidad correctamente.');
-    const ok = await invPersistir({ nombre, cantidad, unidad, fecha, categoria: invEsBebidaMenu(nombre) ? 'bebida' : 'general', origen: invEsBebidaMenu(nombre) ? 'menu-bebidas' : 'manual' });
-    if (ok) invLimpiarFormulario();
-  };
-
-  window.invActualizarStock = async function(tipo) {
-    const id = document.getElementById('invProductoSeleccionado')?.value;
-    const index = invGestionInventario.findIndex(item => item.id === id);
-    const cantidad = Number(document.getElementById('invCantidadMovimiento')?.value);
-    const fecha = document.getElementById('invFechaMovimientoStock')?.value || invFechaHoy();
-    if (!id || index === -1 || Number.isNaN(cantidad) || cantidad <= 0) return alert('Selecciona un producto y una cantidad válida.');
-    const producto = { ...invGestionInventario[index] };
-    producto.cantidad = tipo === 'salida' ? Math.max(0, Number(producto.cantidad || 0) - cantidad) : Number(producto.cantidad || 0) + cantidad;
-    producto.fecha = fecha;
-    producto.actualizadoEn = new Date().toISOString();
-    await invPersistir(producto, index, { sumarSiExiste: false });
-    const mov = document.getElementById('invCantidadMovimiento');
-    const fechaMov = document.getElementById('invFechaMovimientoStock');
-    if (mov) mov.value = '';
-    if (fechaMov) fechaMov.value = '';
-  };
-
-  window.invEliminarProducto = async function(index) {
-    const item = invGestionInventario[index];
-    if (!item || !confirm(`¿Eliminar "${item.nombre}" del inventario?`)) return;
-    try {
-      if (invDbDisponible() && item.id) await firestoreDb.collection(invCollectionName()).doc(item.id).delete();
-      else { invGestionInventario.splice(index, 1); invGuardarLocal(); invRenderInventario(); }
-    } catch (error) {
-      console.error('No se pudo eliminar en Firebase:', error);
-      invGestionInventario.splice(index, 1);
-      invGuardarLocal();
-      invRenderInventario();
-    }
-  };
-
-  window.invMostrarEditorProducto = function(index) {
-    const editor = document.getElementById(`inv-editor-${index}`);
-    if (editor) editor.classList.toggle('hidden');
-  };
-
-  window.invGuardarEdicion = async function(index) {
-    const item = invGestionInventario[index];
-    if (!item) return;
-    const nombre = document.getElementById(`inv-editar-nombre-${index}`)?.value.trim();
-    const fecha = document.getElementById(`inv-editar-fecha-${index}`)?.value;
-    if (!nombre) return alert('El nombre no puede estar vacío.');
-    await invPersistir({ ...item, nombre, fecha: fecha || item.fecha, categoria: invEsBebidaMenu(nombre) ? 'bebida' : item.categoria, origen: invEsBebidaMenu(nombre) ? 'menu-bebidas' : item.origen }, index, { sumarSiExiste: false });
-  };
-
-  function invRenderInventario() {
-    const lista = document.getElementById('invListaInventario');
-    const selector = document.getElementById('invProductoSeleccionado');
-    const filtro = String(document.getElementById('invBuscadorInventario')?.value || '').toLowerCase();
-    if (!lista || !selector) return;
-    lista.innerHTML = '';
-    selector.innerHTML = '<option value="">Selecciona producto</option>';
-    const ordenado = invGestionInventario.map((item, index) => ({ item: invNormalizarItem(item, item.id), index })).sort((a, b) => a.item.nombre.localeCompare(b.item.nombre));
-    let visibles = 0;
-    ordenado.forEach(({ item, index }) => {
-      if (!String(item.nombre || '').toLowerCase().includes(filtro)) return;
-      visibles += 1;
-      const stockBajo = Number(item.cantidad || 0) <= INV_STOCK_BAJO_UMBRAL;
-      const bebida = item.categoria === 'bebida' || item.origen === 'menu-bebidas' || invEsBebidaMenu(item.nombre);
-      const card = document.createElement('div');
-      card.className = `border rounded-2xl p-4 flex flex-col md:flex-row md:items-start md:justify-between gap-3 ${stockBajo ? 'bg-red-50 border-red-200' : 'bg-yellow-50/60 border-yellow-100'}`;
-      card.innerHTML = `
-        <div class="min-w-0 flex-1">
-          <div class="flex flex-wrap items-center gap-2">
-            <h4 class="font-black text-gray-900">${invEsc(item.nombre)}</h4>
-            ${bebida ? '<span class="bg-blue-100 text-blue-800 text-xs font-black px-2 py-1 rounded-full">Bebida del menú</span>' : '<span class="bg-gray-100 text-gray-700 text-xs font-black px-2 py-1 rounded-full">General</span>'}
-            ${stockBajo ? '<span class="bg-red-600 text-white text-xs font-black px-2 py-1 rounded-full">⚠ Bajo stock</span>' : ''}
-          </div>
-          <p class="text-lg font-black text-gray-800 mt-1">${Number(item.cantidad || 0).toFixed(2)} ${invEsc(item.unidad)}</p>
-          <p class="text-xs text-gray-500">Última modificación: ${invEsc(item.fecha || 'Sin fecha')}</p>
-          <div id="inv-editor-${index}" class="hidden mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
-            <input type="text" id="inv-editar-nombre-${index}" value="${invEsc(item.nombre)}" class="rounded-xl border border-yellow-200 px-3 py-2" />
-            <input type="date" id="inv-editar-fecha-${index}" value="${invEsc(item.fecha || '')}" class="rounded-xl border border-yellow-200 px-3 py-2" />
-            <button type="button" onclick="invGuardarEdicion(${index})" class="bg-green-600 hover:bg-green-700 text-white rounded-xl px-3 py-2 font-black">Guardar</button>
-          </div>
-        </div>
-        <div class="flex md:flex-col gap-2">
-          <button type="button" onclick="invMostrarEditorProducto(${index})" class="bg-sky-500 hover:bg-sky-600 text-white rounded-xl px-3 py-2 font-black">✏️</button>
-          <button type="button" onclick="invEliminarProducto(${index})" class="bg-red-600 hover:bg-red-700 text-white rounded-xl px-3 py-2 font-black">×</button>
-        </div>`;
-      lista.appendChild(card);
-      const option = document.createElement('option');
-      option.value = item.id;
-      option.textContent = bebida ? `${item.nombre} · Bebida` : item.nombre;
-      selector.appendChild(option);
-    });
-    if (!visibles) lista.innerHTML = '<div class="p-4 rounded-2xl bg-gray-50 text-gray-500 italic">No se encontraron productos.</div>';
-    invGuardarLocal();
-  }
-
-  window.invFiltrarInventario = function() { invRenderInventario(); };
-
-  function invEscucharInventario() {
-    if (typeof invGestionUnsubscribe === 'function') invGestionUnsubscribe();
-    if (!invDbDisponible()) {
-      invActualizarIndicador('desconectado', firebaseAuth?.currentUser ? 'Firebase no está disponible. Se usa copia local.' : 'No hay sesión Firebase activa en este módulo.');
-      invCargarLocal();
-      invRenderInventario();
-      return;
-    }
-    invActualizarIndicador('verificando');
-    try {
-      invGestionUnsubscribe = firestoreDb.collection(invCollectionName()).orderBy('nombre').onSnapshot((snapshot) => {
-        invGestionInventario = snapshot.docs.map(doc => invNormalizarItem({ id: doc.id, ...doc.data() }, doc.id));
-        invGuardarLocal();
-        invActualizarIndicador('conectado');
-        invRenderInventario();
-      }, (error) => {
-        console.warn('No se pudo sincronizar inventario de gestión:', error);
-        invActualizarIndicador('desconectado', 'Sin permisos o sin conexión. Se muestra copia local.');
-        invCargarLocal();
-        invRenderInventario();
-      });
-    } catch (error) {
-      console.error('Error iniciando inventario:', error);
-      invActualizarIndicador('desconectado');
-      invCargarLocal();
-      invRenderInventario();
-    }
-  }
-
-  function invIniciarModulo() {
-    invCargarLocal();
-    invActualizarBebidasDesdeCatalogo();
-    invRenderInventario();
-    invEscucharInventario();
-    invEscucharCatalogoBebidas();
-    if (!invAuthListenerInstalado && firebaseAuth?.onAuthStateChanged) {
-      invAuthListenerInstalado = true;
-      firebaseAuth.onAuthStateChanged(() => {
-        if (!document.getElementById('inventarioVista')?.classList.contains('hidden')) {
-          invEscucharInventario();
-          invEscucharCatalogoBebidas();
-        }
-      });
-    }
-  }
-
-  window.invRefrescarInventario = function() { invIniciarModulo(); };
-
-  window.abrirInventarioVista = function() {
-    if (!verificarAcceso(['admin', 'administrador'])) return;
-    if (typeof ocultarVistasPrincipalesLaParepa === 'function') ocultarVistasPrincipalesLaParepa();
-    else ['appMain', 'historicosVista', 'cajaVista', 'domiciliosVista', 'menuDigitalVista'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
-    const vista = document.getElementById('inventarioVista');
-    if (vista) vista.classList.remove('hidden');
-    invIniciarModulo();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  window.invExportarInventarioPDF = async function() {
-    if (!invGestionInventario.length) return alert('No hay productos en inventario.');
-    const cargar = (src) => new Promise((resolve, reject) => {
-      if ([...document.scripts].some(s => s.src === src)) return resolve();
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-    try {
-      if (!window.jspdf?.jsPDF) await cargar('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-      if (!window.jspdf?.jsPDF?.API?.autoTable) await cargar('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js');
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.setFontSize(18);
-      doc.text('Inventario La Parepa', 14, 20);
-      const filas = invGestionInventario.map(item => [item.nombre, Number(item.cantidad || 0).toFixed(2), item.unidad, item.fecha || '-', (item.origen === 'menu-bebidas' || item.categoria === 'bebida') ? 'Bebida menú' : 'General', Number(item.cantidad || 0) <= INV_STOCK_BAJO_UMBRAL ? 'Bajo stock' : 'OK']);
-      doc.autoTable({ head: [['Producto', 'Cantidad', 'Unidad', 'Fecha', 'Tipo', 'Estado']], body: filas, startY: 30, styles: { fontSize: 10 } });
-      doc.save('inventario-la-parepa.pdf');
-    } catch (error) {
-      console.error('No se pudo generar PDF:', error);
-      const contenido = invGestionInventario.map(i => `${i.nombre};${Number(i.cantidad || 0).toFixed(2)};${i.unidad};${i.fecha || ''}`).join('
-');
-      const blob = new Blob(['Producto;Cantidad;Unidad;Fecha
-' + contenido], { type: 'text/csv;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'inventario-la-parepa.csv';
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }
-  };
-
-  document.addEventListener('DOMContentLoaded', () => {
-    invActualizarBebidasDesdeCatalogo();
-  });
-})();
-</script>
-
 <script id="standalone-safe-modules">
 function mostrarModuloIndependiente(nombreModulo) {
-  if (nombreModulo === 'Inventario' && typeof abrirInventarioVista === 'function') { abrirInventarioVista(); return; }
   alert(`${nombreModulo} está marcado como módulo externo. Esta versión está trabajando como página independiente, por eso no intenta abrir archivos adicionales.`);
 }
 </script>
@@ -9980,7 +9457,14 @@ function mostrarModuloIndependiente(nombreModulo) {
         <table><thead><tr><th>Pedido</th><th>Cliente</th><th>Tipo</th><th>Pago</th><th>Estado</th><th>Total</th></tr></thead><tbody>
           ${r.ventas.map(v => `<tr><td>#${v.comanda || v.recibo || "-"}</td><td>${v.cliente || ""}</td><td>${v.tipoPedido || ""}</td><td>${v.formaPago || ""}</td><td>${getEstadoPedido(v)}</td><td>${money(amountVenta(v))}</td></tr>`).join("") || "<tr><td colspan='6'>Sin ventas</td></tr>"}
         </tbody></table>
-      </body></html>
+      
+<script id="lp-inventario-separado-helper">
+  function abrirInventarioVista() {
+    window.location.href = 'inventario.html';
+  }
+</script>
+
+</body></html>
     `);
     win.document.close();
     setTimeout(() => win.print(), 300);
@@ -11391,5 +10875,12 @@ function mostrarModuloIndependiente(nombreModulo) {
     }
   });
 </script>
+
+<script id="lp-inventario-separado-helper">
+  function abrirInventarioVista() {
+    window.location.href = 'inventario.html';
+  }
+</script>
+
 </body>
 </html>
