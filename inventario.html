@@ -30,31 +30,40 @@
   </script>
   <style>
   :root {
-    --lp-crema: #fff7ed;
-    --lp-crema-2: #f7ead6;
-    --lp-dorado: #facc15;
-    --lp-dorado-2: #f59e0b;
-    --lp-cafe: #6f3f25;
-    --lp-cafe-oscuro: #3a2116;
-    --lp-rojo: #b91c1c;
-    --lp-verde: #166534;
+    --lp-red: #e41424;
+    --lp-red-dark: #b80f1b;
+    --lp-red-soft: #fde7e9;
+    --lp-cream: #f8dfb8;
+    --lp-cream-light: #fff4df;
+    --lp-cream-soft: #fff9ed;
+    --lp-card: #ffffff;
+    --lp-text: #21110f;
+    --lp-muted: #7c5f57;
+    --lp-border: rgba(228, 20, 36, 0.22);
+    --lp-shadow: rgba(77, 28, 22, 0.13);
   }
+
   * { box-sizing: border-box; }
+
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     margin: 0;
-    background: radial-gradient(circle at top left, rgba(255, 238, 204, 0.85), transparent 34rem), linear-gradient(135deg, #fff7ed 0%, #f7ead6 45%, #fffaf2 100%);
-    color: #3a2116;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(228, 20, 36, 0.09), transparent 32rem),
+      linear-gradient(135deg, var(--lp-cream-light) 0%, var(--lp-cream) 48%, #fff7e8 100%);
+    color: var(--lp-text);
   }
+
   header {
-    background: linear-gradient(135deg, #facc15, #f59e0b);
-    color: #3a2116;
-    padding: 22px 18px;
+    background: var(--lp-red);
+    color: #ffffff;
+    padding: 18px;
     text-align: center;
-    font-size: clamp(24px, 3vw, 34px);
+    font-size: clamp(23px, 3vw, 32px);
     font-weight: 900;
     letter-spacing: -.02em;
-    box-shadow: 0 10px 28px rgba(120, 53, 15, 0.18);
+    box-shadow: 0 10px 28px rgba(184, 15, 27, 0.25);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -69,8 +78,10 @@
     gap: 14px;
     flex-wrap: wrap;
   }
+
   .header-title { line-height: 1.1; }
   .header-actions { display: flex; align-items: center; gap: 10px; }
+
   .btn-header {
     display: inline-flex;
     align-items: center;
@@ -79,56 +90,105 @@
     min-height: 42px;
     padding: 10px 16px;
     border-radius: 999px;
-    background: #3a2116;
-    color: #fff7ed;
+    background: #ffffff;
+    color: var(--lp-red);
     font-size: 14px;
     font-weight: 900;
     text-decoration: none;
-    box-shadow: 0 8px 18px rgba(58, 33, 22, 0.22);
-  }
-  .btn-header:hover { background: #6f3f25; }
-  @media (max-width: 640px) {
-    .header-content { justify-content: center; text-align: center; }
-    .btn-header { width: 100%; }
+    box-shadow: 0 8px 18px rgba(33, 17, 15, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.35);
   }
 
-  .secciones-superiores { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; padding: 20px; max-width: 1280px; margin: 0 auto; }
-  .seccion, .inventario, .estado-db {
-    background: rgba(255,255,255,.92);
-    border: 1px solid rgba(250, 204, 21, .25);
-    padding: 22px;
-    border-radius: 24px;
-    box-shadow: 0 14px 32px rgba(120, 53, 15, 0.10);
+  .btn-header:hover {
+    background: var(--lp-cream-light);
+    color: var(--lp-red-dark);
   }
-  section h2, .seccion h2, .inventario h2 { color: #92400e; font-size: 22px; margin: 0 0 14px; font-weight: 900; }
-  label { font-weight: 800; }
-  input, select, button {
+
+  .secciones-superiores {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  .seccion,
+  .inventario,
+  .estado-db {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid var(--lp-border);
+    padding: 22px;
+    border-radius: 22px;
+    box-shadow: 0 14px 32px var(--lp-shadow);
+  }
+
+  section h2,
+  .seccion h2,
+  .inventario h2 {
+    color: var(--lp-red);
+    font-size: 22px;
+    margin: 0 0 14px;
+    font-weight: 900;
+  }
+
+  label {
+    font-weight: 800;
+    color: var(--lp-red);
+  }
+
+  input,
+  select,
+  button {
     padding: 12px 14px;
     margin: 6px 0;
     width: 100%;
     border-radius: 16px;
-    border: 1px solid #fde68a;
+    border: 1px solid rgba(228, 20, 36, 0.24);
     font-size: 15px;
     box-sizing: border-box;
     font-family: inherit;
-    background-color: #fffdf5;
+    background-color: var(--lp-cream-soft);
+    color: var(--lp-text);
   }
-  input:focus, select:focus { outline: 3px solid rgba(250, 204, 21, .35); background-color: #fffbeb; }
+
+  input:focus,
+  select:focus {
+    outline: 3px solid rgba(228, 20, 36, 0.22);
+    background-color: #ffffff;
+    border-color: var(--lp-red);
+  }
+
   button {
-    background: linear-gradient(135deg, #facc15, #f59e0b);
-    color: #3a2116;
+    background: var(--lp-red);
+    color: #ffffff;
     border: none;
     font-weight: 900;
     cursor: pointer;
-    transition: transform .15s ease, filter .2s ease;
-    box-shadow: 0 8px 18px rgba(245, 158, 11, .22);
+    transition: transform .15s ease, filter .2s ease, background .2s ease;
+    box-shadow: 0 8px 18px rgba(228, 20, 36, .22);
   }
-  button:hover { filter: brightness(.98); transform: translateY(-1px); }
-  .inventario { margin: 20px auto; max-width: 1280px; }
-  .inventario-lista { margin-top: 15px; display: grid; gap: 12px; }
+
+  button:hover {
+    background: var(--lp-red-dark);
+    filter: brightness(.99);
+    transform: translateY(-1px);
+  }
+
+  .inventario {
+    margin: 20px auto;
+    max-width: 1280px;
+  }
+
+  .inventario-lista {
+    margin-top: 15px;
+    display: grid;
+    gap: 12px;
+  }
+
   .producto {
-    background: #fffbeb;
-    border: 1px solid #fde68a;
+    background: #ffffff;
+    border: 1px solid rgba(228, 20, 36, 0.18);
     padding: 14px;
     border-radius: 18px;
     margin-bottom: 0;
@@ -136,21 +196,77 @@
     align-items: center;
     justify-content: space-between;
     font-size: 16px;
-    box-shadow: 0 6px 16px rgba(120, 53, 15, 0.06);
+    box-shadow: 0 6px 16px rgba(77, 28, 22, 0.07);
   }
-  .btn-eliminar { margin-left: 10px; background: #ef4444; color: white; border: none; width: 34px; height: 34px; border-radius: 12px; cursor: pointer; font-size: 18px; line-height: 1; text-align: center; padding: 0; font-weight: 900; user-select: none; box-shadow: none; }
-  .btn-eliminar:hover { background: #dc2626; }
-  .boton-pdf { display:block; max-width: 1280px; margin: 0 auto 20px; width: calc(100% - 40px); padding: 14px 20px; font-size: 16px; border-radius: 18px; background: #111827; color: white; }
-  .boton-pdf:hover { background: #000; }
-  .estado-db { margin: 20px auto 0; max-width: 1280px; display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; }
+
+  .producto strong { color: var(--lp-text); }
+
+  .btn-eliminar {
+    margin-left: 10px;
+    background: var(--lp-red);
+    color: white;
+    border: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    text-align: center;
+    padding: 0;
+    font-weight: 900;
+    user-select: none;
+    box-shadow: none;
+  }
+
+  .btn-eliminar:hover { background: var(--lp-red-dark); }
+
+  .boton-pdf {
+    display: block;
+    max-width: 1280px;
+    margin: 0 auto 20px;
+    width: calc(100% - 40px);
+    padding: 14px 20px;
+    font-size: 16px;
+    border-radius: 18px;
+    background: var(--lp-text);
+    color: white;
+  }
+
+  .boton-pdf:hover { background: var(--lp-red-dark); }
+
+  .estado-db {
+    margin: 20px auto 0;
+    max-width: 1280px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+
   .estado-db-info { display: flex; align-items: center; gap: 12px; }
-  .estado-db-dot { width: 14px; height: 14px; border-radius: 999px; flex-shrink: 0; background: #ef4444; box-shadow: 0 0 0 4px rgba(239,68,68,0.12); }
-  .estado-db-dot.conectado { background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,0.12); }
-  .estado-db-dot.verificando { background: #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,0.12); animation: pulso-db 1.2s infinite; }
-  .estado-db-texto strong { display: block; color: #3a2116; }
-  .estado-db-texto small, .estado-db-meta { color: #78716c; font-weight: 700; }
-  @keyframes pulso-db { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: .7; } 100% { transform: scale(1); opacity: 1; } }
-  @media (max-width: 720px) { .secciones-superiores { padding: 14px; } .inventario, .estado-db { margin-left: 14px; margin-right: 14px; } }
+  .estado-db-dot { width: 14px; height: 14px; border-radius: 999px; flex-shrink: 0; background: var(--lp-red); box-shadow: 0 0 0 4px rgba(228, 20, 36, 0.12); }
+  .estado-db-dot.conectado { background: #16a34a; box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12); }
+  .estado-db-dot.verificando { background: var(--lp-red); box-shadow: 0 0 0 4px rgba(228, 20, 36, 0.14); animation: pulso-db 1.2s infinite; }
+  .estado-db-texto strong { display: block; color: var(--lp-text); }
+  .estado-db-texto small, .estado-db-meta { color: var(--lp-muted); font-weight: 700; }
+
+  @keyframes pulso-db {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: .7; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @media (max-width: 720px) {
+    .secciones-superiores { padding: 14px; }
+    .inventario, .estado-db { margin-left: 14px; margin-right: 14px; }
+  }
+
+  @media (max-width: 640px) {
+    .header-content { justify-content: center; text-align: center; }
+    .btn-header { width: 100%; }
+  }
 </style>
 
 </head>
@@ -180,7 +296,7 @@
   <!-- Sección: Agregar Producto -->
   <div class="seccion">
     <h2>➕ Agregar Producto</h2>
-    <label for="bebidaMenuSelect" style="display:block; font-weight:700; color:#92400e; margin-top:4px;">Bebidas del menú La Parepa</label>
+    <label for="bebidaMenuSelect" style="display:block; font-weight:700; color:#e41424; margin-top:4px;">Bebidas del menú La Parepa</label>
     <select id="bebidaMenuSelect" onchange="aplicarBebidaMenuSeleccionada()">
       <option value="">Selecciona una bebida del menú</option>
     </select>
@@ -633,8 +749,8 @@
 
         productoHTML.innerHTML = `
   <div style="flex-grow: 1;">
-    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><strong>${item.nombre}</strong>${vinculadoMenu ? '<span style="background:#dbeafe; color:#1d4ed8; font-size:12px; font-weight:700; padding:3px 8px; border-radius:999px;">Bebida del menú</span>' : ''}</div>${Number(item.cantidad || 0).toFixed(2)} ${item.unidad}<br>
-    <small style="color: #888;">📅 ${item.fecha ? 'Última modificación: ' + item.fecha : 'Sin fecha registrada'}</small>
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><strong>${item.nombre}</strong>${vinculadoMenu ? '<span style="background:#fde7e9; color:#e41424; font-size:12px; font-weight:700; padding:3px 8px; border-radius:999px;">Bebida del menú</span>' : ''}</div>${Number(item.cantidad || 0).toFixed(2)} ${item.unidad}<br>
+    <small style="color: #7c5f57;">📅 ${item.fecha ? 'Última modificación: ' + item.fecha : 'Sin fecha registrada'}</small>
     ${stockBajo ? `
       <div style="
         display: inline-block;
@@ -653,12 +769,12 @@
     <div id="editor-${index}" style="margin-top: 10px; display: none;">
       <input type="text" id="editar-nombre-${index}" value="${item.nombre}" placeholder="Nuevo nombre" />
       <input type="date" id="editar-fecha-${index}" value="${item.fecha || ''}" />
-      <button onclick="guardarEdicion(${index})" style="background:#16a34a; color:white; font-weight:bold; border:none; padding:5px 10px; border-radius:6px;">Guardar</button>
+      <button onclick="guardarEdicion(${index})" style="background:#e41424; color:white; font-weight:bold; border:none; padding:5px 10px; border-radius:6px;">Guardar</button>
     </div>
   </div>
 
   <div style="display: flex; flex-direction: column; gap: 6px; margin-left: 10px;">
-    <button onclick="mostrarEditorProducto(${index})" class="btn-eliminar" style="background:#38bdf8;" title="Editar">✏️</button>
+    <button onclick="mostrarEditorProducto(${index})" class="btn-eliminar" style="background:#21110f;" title="Editar">✏️</button>
     <button onclick="eliminarProducto(${index})" class="btn-eliminar" title="Eliminar">×</button>
   </div>
 `;
@@ -672,7 +788,7 @@
       });
 
       if (!hayResultados) {
-        lista.innerHTML = `<div style="padding: 15px; color: #999; font-style: italic;">No se encontraron productos.</div>`;
+        lista.innerHTML = `<div style="padding: 15px; color: #7c5f57; font-style: italic;">No se encontraron productos.</div>`;
       }
 
       guardarInventarioLocal();
