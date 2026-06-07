@@ -753,10 +753,10 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
       </button>
 
       <div class="hidden md:flex gap-2 w-auto items-center desktop-header-actions">
-        <button type="button" onclick="mostrarModuloIndependiente('Finanzas')" data-role="finanzas-only" class="bg-white text-yellow-700 font-semibold px-3 py-2 rounded-lg shadow hover:bg-yellow-100 transition text-center">
+        <button type="button" onclick="window.location.href='finanzas.html'" data-role="finanzas-only" class="bg-white text-yellow-700 font-semibold px-3 py-2 rounded-lg shadow hover:bg-yellow-100 transition text-center">
           📋 Finanzas
         </button>
-        <button type="button" onclick="mostrarModuloIndependiente('Nómina')" data-role="gestion-only" class="bg-white text-yellow-700 font-semibold px-3 py-2 rounded-lg shadow hover:bg-yellow-100 transition text-center">
+        <button type="button" onclick="window.location.href='nomina.html'" data-role="gestion-only" class="bg-white text-yellow-700 font-semibold px-3 py-2 rounded-lg shadow hover:bg-yellow-100 transition text-center">
           👥 Nómina
         </button>
         <button type="button" onclick="abrirHistoricos()" data-role="gestion-only" class="bg-white text-yellow-700 font-semibold px-3 py-2 rounded-lg shadow hover:bg-yellow-100 transition text-center">
@@ -810,8 +810,8 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
           <button type="button" onclick="imprimirUltimaCocinero(); cerrarMobileMenu();" class="menu-link-text">👨‍🍳 Imprimir recibo cocina</button>
           <button type="button" onclick="abrirCajaVista(); cerrarMobileMenu();" class="menu-link-text">💵 Cierre del día</button>
           <button type="button" onclick="abrirModalAperturaCajaManual(); cerrarMobileMenu();" class="menu-link-text">💰 Abrir caja</button>
-          <button type="button" onclick="cerrarMobileMenu(); mostrarModuloIndependiente('Finanzas');" data-role="finanzas-only" class="menu-link-text admin">📋 Finanzas</button>
-          <button type="button" onclick="cerrarMobileMenu(); mostrarModuloIndependiente('Nómina');" data-role="gestion-only" class="menu-link-text admin">👥 Nómina</button>
+          <button type="button" onclick="cerrarMobileMenu(); window.location.href='finanzas.html';" data-role="finanzas-only" class="menu-link-text admin">📋 Finanzas</button>
+          <button type="button" onclick="cerrarMobileMenu(); window.location.href='nomina.html';" data-role="gestion-only" class="menu-link-text admin">👥 Nómina</button>
           <button type="button" onclick="abrirHistoricos(); cerrarMobileMenu();" data-role="gestion-only" class="menu-link-text admin">📈 Históricos</button>
           <button type="button" onclick="abrirDomiciliosVista(); cerrarMobileMenu();" data-role="gestion-only" class="menu-link-text admin">🛵 Domicilios</button>
           <button type="button" onclick="cerrarMobileMenu(); window.location.href='inventario.html';" data-role="gestion-only" class="menu-link-text admin">📆 Inventario</button>
@@ -8381,7 +8381,20 @@ window.addEventListener('DOMContentLoaded', () => {
 
 <script id="standalone-safe-modules">
 function mostrarModuloIndependiente(nombreModulo) {
-  alert(`${nombreModulo} está marcado como módulo externo. Esta versión está trabajando como página independiente, por eso no intenta abrir archivos adicionales.`);
+  const modulo = String(nombreModulo || '').toLowerCase();
+  if (modulo.includes('finanza')) {
+    window.location.href = 'finanzas.html';
+    return;
+  }
+  if (modulo.includes('nómina') || modulo.includes('nomina')) {
+    window.location.href = 'nomina.html';
+    return;
+  }
+  if (modulo.includes('inventario')) {
+    window.location.href = 'inventario.html';
+    return;
+  }
+  alert(`${nombreModulo} todavía no tiene página conectada.`);
 }
 </script>
 
