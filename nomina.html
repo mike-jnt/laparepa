@@ -1170,6 +1170,52 @@
     })();
   </script>
 
+
+<script id="lp-role-guard-page">
+(function() {
+  const ROLES_PERMITIDOS = ["admin", "administrador", "contador"];
+  const FIREBASE_CONFIG_GUARD = {
+  apiKey: "AIzaSyDRnuHOt_hH7BWvoEmbDhsarehUE_ItzWg",
+  authDomain: "laparepa.firebaseapp.com",
+  projectId: "laparepa",
+  storageBucket: "laparepa.firebasestorage.app",
+  messagingSenderId: "1039882805860",
+  appId: "1:1039882805860:web:af8a054d0aa32ae014f571",
+  measurementId: "G-TSN6MY1H8K"
+};
+  function normalizarRol(rol) { return String(rol || '').trim().toLowerCase(); }
+  function rolPermitido(rol) {
+    rol = normalizarRol(rol);
+    if ((rol === 'admin' || rol === 'administrador') && (ROLES_PERMITIDOS.includes('admin') || ROLES_PERMITIDOS.includes('administrador'))) return true;
+    return ROLES_PERMITIDOS.includes(rol);
+  }
+  function bloquearPagina(mensaje) {
+    document.body.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fff7ed;color:#3b2318;font-family:Arial,sans-serif;padding:24px;"><div style="max-width:520px;background:white;border:1px solid #fecaca;border-radius:24px;padding:28px;box-shadow:0 18px 40px rgba(0,0,0,.12);text-align:center;"><h1 style="color:#991b1b;margin:0 0 12px;font-size:26px;">Acceso restringido</h1><p style="font-size:16px;line-height:1.5;">${mensaje}</p><button onclick="location.href='index.html'" style="margin-top:18px;background:#b91c1c;color:white;border:0;border-radius:14px;padding:12px 18px;font-weight:800;cursor:pointer;">← Volver al POS</button></div></div>`;
+  }
+  async function iniciarGuardia() {
+    try {
+      if (!window.firebase) return bloquearPagina('No se cargó Firebase. Vuelve al POS e inicia sesión.');
+      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG_GUARD);
+      const auth = firebase.auth();
+      const db = firebase.firestore();
+      const user = await new Promise(resolve => {
+        const timer = setTimeout(() => resolve(auth.currentUser || null), 2500);
+        const unsub = auth.onAuthStateChanged(u => { clearTimeout(timer); try { unsub(); } catch(_){} resolve(u || null); });
+      });
+      if (!user) return bloquearPagina('Debes iniciar sesión desde el POS principal para abrir este módulo.');
+      const doc = await db.collection('usuariosSistema').doc(user.uid).get();
+      const rol = doc.exists ? normalizarRol(doc.data().rol) : '';
+      const activo = doc.exists ? doc.data().activo !== false : false;
+      if (!activo || !rolPermitido(rol)) return bloquearPagina('Tu usuario no tiene permisos para este módulo.');
+    } catch (error) {
+      console.error('Guardia de permisos:', error);
+      bloquearPagina('No fue posible validar tus permisos. Revisa conexión y reglas de Firebase.');
+    }
+  }
+  window.addEventListener('DOMContentLoaded', iniciarGuardia);
+})();
+</script>
+
 </body>
 </html>
 
