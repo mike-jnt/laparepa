@@ -652,8 +652,28 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
 <style id="lp-contabilidad-interface-style">
   body.lp-contador-activo #topNav,
   body.lp-contador-activo #mobileQuickBar,
-  body.lp-contador-activo #mobileHeaderMenu {
+  body.lp-contador-activo #mobileHeaderMenu,
+  body.lp-cajero-activo #topNav,
+  body.lp-cajero-activo #mobileHeaderMenu {
     display: none !important;
+  }
+
+  body.lp-cajero-activo #lpCajeroPanel {
+    display: block !important;
+  }
+
+  body.lp-cajero-activo #resumenProductos,
+  body.lp-cajero-activo #accionesLoteVentas,
+  body.lp-cajero-activo #colSeleccionVentas,
+  body.lp-cajero-activo [data-role="gestion-only"],
+  body.lp-cajero-activo [data-role="finanzas-only"],
+  body.lp-cajero-activo [data-role="admin-only"],
+  body.lp-cajero-activo [data-lp-users-button] {
+    display: none !important;
+  }
+
+  body.lp-cajero-activo #appMain {
+    padding-top: 1rem !important;
   }
 </style>
 
@@ -877,6 +897,58 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
     </section>
   </div>
 </main>
+
+<!-- Interfaz exclusiva para rol Cajero -->
+<section class="hidden px-4 md:px-6 pt-4 bg-gradient-to-br from-amber-50 via-orange-50 to-red-50" id="lpCajeroPanel">
+  <div class="max-w-7xl mx-auto rounded-[1.75rem] overflow-hidden border border-red-100 bg-white shadow-xl">
+    <div class="bg-gradient-to-r from-red-700 via-red-600 to-orange-500 text-white p-5 md:p-6">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <p class="text-xs uppercase tracking-[0.22em] text-red-100 font-black">Panel de cajero</p>
+          <h2 class="text-2xl md:text-4xl font-black mt-1">Hola, <span id="lpCajeroHomeUsuario">Usuario</span></h2>
+          <p class="text-red-50 mt-2 text-sm md:text-base">Solo tienes visibles las funciones necesarias para vender, imprimir, manejar caja e inventario.</p>
+        </div>
+        <div class="bg-white/15 border border-white/25 rounded-3xl p-4 min-w-[210px]">
+          <p class="text-sm text-red-100">Rol activo</p>
+          <p class="text-2xl font-black" id="lpCajeroHomeRol">Cajero</p>
+          <button class="mt-4 w-full bg-white text-red-700 rounded-2xl px-4 py-3 font-black hover:bg-red-50" onclick="cerrarSesionRol()" type="button">🔒 Cerrar sesión</button>
+        </div>
+      </div>
+    </div>
+    <div class="p-4 md:p-5 bg-amber-50/80">
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <button class="text-left bg-white rounded-2xl border border-red-100 shadow-sm hover:shadow-md transition p-4" onclick="volverAlPOS()" type="button">
+          <div class="text-3xl mb-2">🧾</div>
+          <h3 class="font-black text-gray-900">Ventas</h3>
+          <p class="text-xs text-gray-600 mt-1">Crear pedidos e imprimir recibos.</p>
+        </button>
+        <button class="text-left bg-white rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition p-4" onclick="abrirModalAperturaCajaManual()" type="button">
+          <div class="text-3xl mb-2">💰</div>
+          <h3 class="font-black text-gray-900">Abrir caja</h3>
+          <p class="text-xs text-gray-600 mt-1">Registrar apertura del turno.</p>
+        </button>
+        <button class="text-left bg-white rounded-2xl border border-emerald-100 shadow-sm hover:shadow-md transition p-4" onclick="abrirCajaVista()" type="button">
+          <div class="text-3xl mb-2">💵</div>
+          <h3 class="font-black text-gray-900">Cierre del día</h3>
+          <p class="text-xs text-gray-600 mt-1">Registrar cierre autorizado.</p>
+        </button>
+        <button class="text-left bg-white rounded-2xl border border-yellow-100 shadow-sm hover:shadow-md transition p-4" onclick="window.location.href='inventario.html'" type="button">
+          <div class="text-3xl mb-2">📦</div>
+          <h3 class="font-black text-gray-900">Inventario</h3>
+          <p class="text-xs text-gray-600 mt-1">Consultar y actualizar existencias.</p>
+        </button>
+        <button class="text-left bg-red-50 rounded-2xl border border-red-100 shadow-sm hover:shadow-md transition p-4" onclick="cerrarSesionRol()" type="button">
+          <div class="text-3xl mb-2">🔒</div>
+          <h3 class="font-black text-red-700">Salir</h3>
+          <p class="text-xs text-red-600 mt-1">Cerrar sesión del cajero.</p>
+        </button>
+      </div>
+      <div class="mt-4 rounded-2xl bg-white border border-amber-100 p-4 text-xs md:text-sm text-gray-600">
+        <strong class="text-red-700">Acceso limitado:</strong> no verás finanzas, nómina, históricos, menú digital, domicilios, usuarios, exportar ventas, borrar ventas, eliminar ventas ni resumen de productos.
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- Sección Productos -->
 <main class="p-4 md:p-6" data-perm-view="ventas" id="appMain">
@@ -11257,27 +11329,40 @@ async function iniciarSesion() {
 
 function actualizarMarcoVisiblePorRol() {
   const contador = esContador();
+  const cajero = esCajero();
   const topNav = document.getElementById('topNav');
   const quickBar = document.getElementById('mobileQuickBar');
   const mobileMenu = document.getElementById('mobileHeaderMenu');
   const avisoPedido = document.getElementById('avisoPedidoCatalogo');
+  const panelCajero = document.getElementById('lpCajeroPanel');
+
   document.body.classList.toggle('lp-contador-activo', contador);
+  document.body.classList.toggle('lp-cajero-activo', cajero);
 
   if (topNav) {
-    topNav.classList.toggle('hidden', contador);
-    topNav.style.display = contador ? 'none' : '';
+    const ocultarHeader = contador || cajero;
+    topNav.classList.toggle('hidden', ocultarHeader);
+    topNav.style.display = ocultarHeader ? 'none' : '';
   }
+
   if (quickBar) {
+    // Contabilidad no usa barra rápida. Cajero sí conserva barra rápida de venta e impresión.
     quickBar.classList.toggle('hidden', contador);
     quickBar.style.display = contador ? 'none' : '';
   }
-  if (mobileMenu && contador) {
+
+  if (mobileMenu) {
+    const ocultarMenuGeneral = contador || cajero;
     mobileMenu.classList.add('hidden');
-    mobileMenu.style.display = 'none';
-  } else if (mobileMenu) {
-    mobileMenu.style.display = '';
+    mobileMenu.style.display = ocultarMenuGeneral ? 'none' : '';
   }
+
   if (avisoPedido && contador) avisoPedido.classList.add('hidden');
+
+  if (panelCajero) {
+    panelCajero.classList.toggle('hidden', !cajero);
+    panelCajero.style.display = cajero ? 'block' : 'none';
+  }
 }
 
 function aplicarPermisosPorRol() {
@@ -11345,7 +11430,7 @@ function aplicarPermisosPorRol() {
 }
 
 function ocultarTodasLasVistasSistema() {
-  ['lpContabilidadHome','appMain','historicosVista','cajaVista','domiciliosVista','menuDigitalVista','adminUsuariosVista','dashboardPremium','cocinaVistaPremium'].forEach(id => {
+  ['lpContabilidadHome','lpCajeroPanel','appMain','historicosVista','cajaVista','domiciliosVista','menuDigitalVista','adminUsuariosVista','dashboardPremium','cocinaVistaPremium'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
   });
@@ -11363,11 +11448,34 @@ function mostrarInterfazContabilidad() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function mostrarInterfazCajero() {
+  ocultarTodasLasVistasSistema();
+  actualizarMarcoVisiblePorRol();
+  const panel = document.getElementById('lpCajeroPanel');
+  const appMain = document.getElementById('appMain');
+  const usuario = document.getElementById('lpCajeroHomeUsuario');
+  const rol = document.getElementById('lpCajeroHomeRol');
+  if (usuario) usuario.textContent = usuarioActual || 'Usuario';
+  if (rol) rol.textContent = rolNombreVisible();
+  if (panel) {
+    panel.classList.remove('hidden');
+    panel.style.display = 'block';
+  }
+  if (appMain) appMain.classList.remove('hidden');
+  try { mostrarVentas(); } catch (_) {}
+  try { actualizarIndicadoresPasoVenta(); } catch (_) {}
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function abrirVistaInicialSegunRol() {
   aplicarPermisosPorRol();
   ocultarTodasLasVistasSistema();
   if (esContador()) {
     mostrarInterfazContabilidad();
+    return;
+  }
+  if (esCajero()) {
+    mostrarInterfazCajero();
     return;
   }
   if (puedeAccederSistema('ventas')) {
@@ -11411,6 +11519,10 @@ function volverAlPOS() {
   cerrarMobileMenu();
   if (esContador()) {
     mostrarInterfazContabilidad();
+    return;
+  }
+  if (esCajero()) {
+    mostrarInterfazCajero();
     return;
   }
   ocultarTodasLasVistasSistema();
@@ -11693,5 +11805,269 @@ document.addEventListener('DOMContentLoaded', () => {
   aplicarPermisosPorRol();
 });
 </script>
+
+<style id="lp-cajero-directo-css">
+  body.lp-cajero-activo #lpCajeroPanel,
+  body.lp-cajero-activo #dashboardPremium,
+  body.lp-cajero-activo #cocinaVistaPremium,
+  body.lp-cajero-activo #lpHeaderInicio,
+  body.lp-cajero-activo #lpHeaderCocina,
+  body.lp-cajero-activo #lpMobileInicio,
+  body.lp-cajero-activo [data-lp-cajero-oculto="true"] {
+    display: none !important;
+  }
+
+  body.lp-cajero-activo #topNav {
+    display: block !important;
+  }
+
+  body.lp-cajero-activo #appMain {
+    display: block;
+  }
+
+  .lp-cajero-header-btn {
+    font-weight: 800 !important;
+    padding: .55rem .75rem !important;
+    border-radius: .85rem !important;
+    box-shadow: 0 8px 18px rgba(120, 53, 15, .16) !important;
+    transition: all .18s ease !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
+
+  .lp-cajero-header-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .lp-cajero-header-red {
+    background: #b91c1c !important;
+    color: #fff !important;
+    border: 1px solid rgba(255,255,255,.25) !important;
+  }
+
+  .lp-cajero-header-cream {
+    background: #fff7ed !important;
+    color: #991b1b !important;
+    border: 1px solid rgba(153,27,27,.18) !important;
+  }
+
+  .lp-cajero-header-green {
+    background: #15803d !important;
+    color: #fff !important;
+    border: 1px solid rgba(255,255,255,.25) !important;
+  }
+</style>
+<script id="lp-cajero-directo-nueva-venta-fix">
+(function() {
+  function rolCajeroActivoLP() {
+    try { return typeof esCajero === 'function' && esCajero(); } catch (_) { return false; }
+  }
+
+  function rolContadorActivoLP() {
+    try { return typeof esContador === 'function' && esContador(); } catch (_) { return false; }
+  }
+
+  function puedeLP(permiso) {
+    try { return typeof puedeAccederSistema === 'function' && puedeAccederSistema(permiso); } catch (_) { return false; }
+  }
+
+  function mostrarElementoLP(el, visible) {
+    if (!el) return;
+    el.classList.toggle('hidden', !visible);
+    el.style.display = visible ? '' : 'none';
+    if ('disabled' in el) el.disabled = !visible;
+  }
+
+  function cerrarMenuMobileSeguroLP() {
+    try { if (typeof cerrarMobileMenu === 'function') cerrarMobileMenu(); } catch (_) {}
+  }
+
+  function ocultarTodasLasVistasLP() {
+    ['lpContabilidadHome','lpCajeroPanel','dashboardPremium','cocinaVistaPremium','historicosVista','cajaVista','domiciliosVista','menuDigitalVista','adminUsuariosVista'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add('hidden');
+        el.style.display = 'none';
+      }
+    });
+    const appMain = document.getElementById('appMain');
+    if (appMain) {
+      appMain.classList.add('hidden');
+      appMain.style.display = 'none';
+    }
+  }
+
+  function crearBotonesHeaderCajeroLP() {
+    const actions = document.querySelector('#topNav .desktop-header-actions');
+    if (!actions) return;
+
+    if (!document.getElementById('lpCajeroHeaderGuardar')) {
+      actions.insertAdjacentHTML('afterbegin', `
+        <button id="lpCajeroHeaderGuardar" type="button" class="lp-cajero-header-btn lp-cajero-header-red" data-lp-cajero-header="true" onclick="guardarVenta()">💾 Guardar venta</button>
+        <button id="lpCajeroHeaderCliente" type="button" class="lp-cajero-header-btn lp-cajero-header-cream" data-lp-cajero-header="true" onclick="imprimirUltimaCliente()">🧾 Recibo cliente</button>
+        <button id="lpCajeroHeaderCocina" type="button" class="lp-cajero-header-btn lp-cajero-header-cream" data-lp-cajero-header="true" onclick="imprimirUltimaCocinero()">👨‍🍳 Recibo cocina</button>
+      `);
+    }
+  }
+
+  function configurarHeaderCajeroLP() {
+    crearBotonesHeaderCajeroLP();
+
+    const cajero = rolCajeroActivoLP();
+    const contador = rolContadorActivoLP();
+    const topNav = document.getElementById('topNav');
+    const quickBar = document.getElementById('mobileQuickBar');
+    const mobileMenu = document.getElementById('mobileHeaderMenu');
+    const panelCajero = document.getElementById('lpCajeroPanel');
+
+    document.body.classList.toggle('lp-cajero-activo', cajero);
+    document.body.classList.toggle('lp-contador-activo', contador);
+
+    if (topNav) mostrarElementoLP(topNav, !contador);
+    if (quickBar) mostrarElementoLP(quickBar, !contador);
+    if (mobileMenu) {
+      mobileMenu.classList.add('hidden');
+      mobileMenu.style.display = '';
+    }
+    if (panelCajero) mostrarElementoLP(panelCajero, false);
+
+    const idsOcultarCajero = [
+      'lpHeaderInicio',
+      'lpHeaderCocina',
+      'lpMobileInicio'
+    ];
+    idsOcultarCajero.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) mostrarElementoLP(el, !cajero);
+    });
+
+    document.querySelectorAll('[data-lp-cajero-header="true"]').forEach(el => mostrarElementoLP(el, cajero));
+
+    if (cajero) {
+      // Oculta cualquier botón del header o menú móvil que no sea una función permitida del cajero.
+      document.querySelectorAll('#topNav [data-perm]').forEach(el => {
+        const permiso = el.getAttribute('data-perm');
+        const visible = ['ventas','caja','inventario'].includes(permiso) && puedeLP(permiso);
+        mostrarElementoLP(el, visible);
+      });
+      document.querySelectorAll('#topNav [data-perm="admin"], #topNav [data-perm="finanzas"], #topNav [data-perm="nomina"], #topNav [data-perm="historicos"], #topNav [data-perm="usuarios"]').forEach(el => mostrarElementoLP(el, false));
+
+      // Botones premium o generales sin permiso explícito que no debe ver el cajero.
+      ['lpHeaderInicio','lpHeaderCocina','lpMobileInicio'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) mostrarElementoLP(el, false);
+      });
+
+      document.querySelectorAll('#mobileHeaderMenu button').forEach(btn => {
+        const texto = (btn.textContent || '').toLowerCase();
+        const permiso = btn.getAttribute('data-perm') || '';
+        let visible = false;
+        if (permiso && ['ventas','caja','inventario'].includes(permiso) && puedeLP(permiso)) visible = true;
+        if (texto.includes('cerrar sesión')) visible = true;
+        if (texto.includes('guardar venta') || texto.includes('imprimir recibo cliente') || texto.includes('imprimir recibo cocina')) visible = true;
+        if (texto.includes('finanzas') || texto.includes('nómina') || texto.includes('nomina') || texto.includes('históricos') || texto.includes('historicos') || texto.includes('domicilios') || texto.includes('menú digital') || texto.includes('menu digital') || texto.includes('usuarios') || texto.includes('qr mesas') || texto.includes('exportar') || texto.includes('borrar ventas') || texto.includes('resumen productos') || texto.includes('pedidos catálogo') || texto.includes('pedidos catalogo') || texto.includes('inicio') || texto.includes('cocina') && btn.id === 'lpMobileInicio') visible = false;
+        // El botón "Recibo cocina" sí queda permitido aunque tenga la palabra cocina.
+        if (texto.includes('imprimir recibo cocina')) visible = true;
+        mostrarElementoLP(btn, visible);
+      });
+    } else {
+      document.querySelectorAll('[data-lp-cajero-header="true"]').forEach(el => mostrarElementoLP(el, false));
+    }
+  }
+
+  window.actualizarMarcoVisiblePorRol = function actualizarMarcoVisiblePorRol() {
+    configurarHeaderCajeroLP();
+  };
+
+  const aplicarOriginalLP = window.aplicarPermisosPorRol;
+  window.aplicarPermisosPorRol = function aplicarPermisosPorRol() {
+    if (typeof aplicarOriginalLP === 'function') aplicarOriginalLP();
+    configurarHeaderCajeroLP();
+  };
+
+  window.mostrarInterfazCajero = function mostrarInterfazCajero() {
+    ocultarTodasLasVistasLP();
+    configurarHeaderCajeroLP();
+    const appMain = document.getElementById('appMain');
+    if (appMain) {
+      appMain.classList.remove('hidden');
+      appMain.style.display = '';
+    }
+    try { if (typeof irAPasoVenta === 'function') irAPasoVenta(1); } catch (_) {}
+    try { if (typeof mostrarVentas === 'function') mostrarVentas(); } catch (_) {}
+    try { if (typeof actualizarIndicadoresPasoVenta === 'function') actualizarIndicadoresPasoVenta(); } catch (_) {}
+    try { if (typeof actualizarResumenPasosVenta === 'function') actualizarResumenPasosVenta(); } catch (_) {}
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const mostrarDashboardOriginalLP = window.mostrarDashboardPremium;
+  window.mostrarDashboardPremium = function mostrarDashboardPremium() {
+    if (rolCajeroActivoLP()) return window.mostrarInterfazCajero();
+    if (typeof mostrarDashboardOriginalLP === 'function') return mostrarDashboardOriginalLP.apply(this, arguments);
+  };
+
+  const mostrarCocinaOriginalLP = window.mostrarCocinaPremium;
+  window.mostrarCocinaPremium = function mostrarCocinaPremium() {
+    if (rolCajeroActivoLP()) return window.mostrarInterfazCajero();
+    if (typeof mostrarCocinaOriginalLP === 'function') return mostrarCocinaOriginalLP.apply(this, arguments);
+  };
+
+  const mostrarPOSOriginalLP = window.mostrarPOSPremium;
+  window.mostrarPOSPremium = function mostrarPOSPremium() {
+    if (rolCajeroActivoLP()) return window.mostrarInterfazCajero();
+    if (typeof mostrarPOSOriginalLP === 'function') return mostrarPOSOriginalLP.apply(this, arguments);
+    return window.mostrarInterfazCajero();
+  };
+
+  window.abrirVistaInicialSegunRol = function abrirVistaInicialSegunRol() {
+    try { window.aplicarPermisosPorRol(); } catch (_) {}
+    if (rolContadorActivoLP()) {
+      if (typeof window.mostrarInterfazContabilidad === 'function') return window.mostrarInterfazContabilidad();
+    }
+    if (rolCajeroActivoLP()) return window.mostrarInterfazCajero();
+
+    ocultarTodasLasVistasLP();
+    configurarHeaderCajeroLP();
+    if (puedeLP('ventas')) {
+      const appMain = document.getElementById('appMain');
+      if (appMain) {
+        appMain.classList.remove('hidden');
+        appMain.style.display = '';
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (puedeLP('caja') && typeof abrirCajaVista === 'function') return abrirCajaVista();
+    if (puedeLP('historicos') && typeof abrirHistoricos === 'function') return abrirHistoricos();
+  };
+
+  window.volverAlPOS = function volverAlPOS() {
+    cerrarMenuMobileSeguroLP();
+    if (rolContadorActivoLP()) {
+      if (typeof window.mostrarInterfazContabilidad === 'function') return window.mostrarInterfazContabilidad();
+    }
+    if (rolCajeroActivoLP()) return window.mostrarInterfazCajero();
+
+    ocultarTodasLasVistasLP();
+    configurarHeaderCajeroLP();
+    const appMain = document.getElementById('appMain');
+    if (appMain) {
+      appMain.classList.remove('hidden');
+      appMain.style.display = '';
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      try { configurarHeaderCajeroLP(); } catch (_) {}
+      if (rolCajeroActivoLP() && typeof window.mostrarInterfazCajero === 'function') {
+        window.mostrarInterfazCajero();
+      }
+    }, 150);
+  });
+})();
+</script>
+
 </body>
 </html>
