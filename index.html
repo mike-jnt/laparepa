@@ -1047,7 +1047,11 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
           <input type="number" id="costoDomicilio" min="0" step="500" inputmode="numeric" placeholder="Ej: 3000" class="w-full p-3 border border-yellow-300 rounded-xl text-base" />
           <p class="mt-1 text-xs text-gray-500">Este valor lo asume el cliente y no se suma al total de la venta.</p>
         </div>
-        <input type="hidden" id="observaciones" value="" />
+        <div class="md:col-span-2">
+          <label for="observaciones" class="block text-sm font-medium text-gray-700 mb-1">Observaciones generales</label>
+          <textarea id="observaciones" rows="2" placeholder="Solo escribe aquí si hay una indicación general para cocina: sin cebolla, poca salsa, entregar con prioridad..." class="w-full p-3 border border-yellow-300 rounded-xl text-base resize-none"></textarea>
+          <p class="mt-1 text-xs text-gray-500">Estas observaciones saldrán debajo de Tipo de pedido. Las notas específicas se escriben en cada producto solo cuando sean necesarias.</p>
+        </div>
       </div>
 
       <div class="md:hidden mt-5 flex flex-col sm:flex-row gap-2 sm:justify-between">
@@ -5334,8 +5338,9 @@ function cancelarPedidoActual() {
     actualizarTotal();
     const infoDescuento = obtenerInfoDescuentoPedidoActual();
     const subtotalProductos = infoDescuento.subtotalNeto;
-    const observaciones = obtenerObservacionesPedidoActualDesdeNotas()
-      || String(document.getElementById("observaciones")?.value || "").trim();
+    // Las observaciones generales ya no se generan automáticamente desde las notas de productos.
+    // Solo se imprimen si el cajero escribe algo en el campo Observaciones generales.
+    const observaciones = String(document.getElementById("observaciones")?.value || "").trim();
     const totalCobrado = redondearPago(subtotalProductos + costoDomicilio);
     const detallePagos = construirDetallePagosVentaDesdeFormulario(formaPago, totalCobrado);
 
@@ -5701,11 +5706,10 @@ function cancelarPedidoActual() {
     if (costoDomicilioInput) costoDomicilioInput.value = tipoCatalogo.id === 'domicilio' ? String(Number(orden.costoDomicilio || 0)) : '';
     if (formaInput && !formaInput.value) formaInput.value = 'QR';
     if (obsInput) {
-      const notas = String(orden.observaciones || '').trim();
-      const partes = [`Pedido recibido desde catálogo`, tipoCatalogo.etiqueta];
-      if (direccionTexto) partes.push(`Dirección: ${direccionTexto}`);
-      if (notas) partes.push(notas);
-      obsInput.value = partes.filter(Boolean).join(' · ');
+      // No llenar observaciones automáticamente con datos del pedido.
+      // Este campo queda reservado solo para indicaciones importantes escritas manualmente.
+      const notaGeneralManual = String(orden.observacionGeneral || orden.notaGeneral || '').trim();
+      obsInput.value = notaGeneralManual;
     }
     actualizarVistaPedido();
     actualizarCampoCostoDomicilio();
@@ -6564,6 +6568,64 @@ function cancelarPedidoActual() {
   return tipoBase;
 }
 
+
+function normalizarTextoNotaProducto(valor = '') {
+  return String(valor ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function obtenerDetalleProductoImpresion(item = {}) {
+  const candidatos = [
+    item?.detalleProducto,
+    item?.variante,
+    item?.detalle,
+    item?.sabor,
+    item?.opcion
+  ];
+
+  const notaOrigen = String(item?.notaOrigen || '').toLowerCase();
+  if (notaOrigen === 'auto') {
+    candidatos.push(item?.nota, item?.observacionProducto, item?.observacion);
+  }
+
+  const vistos = new Set();
+  return candidatos
+    .map(normalizarTextoNotaProducto)
+    .filter(Boolean)
+    .filter((texto) => {
+      const clave = texto.toLowerCase();
+      if (vistos.has(clave)) return false;
+      vistos.add(clave);
+      return true;
+    })
+    .join(' / ');
+}
+
+function construirNombreConDetalle(item = {}) {
+  const nombre = normalizarTextoNotaProducto(item?.nombre || 'Producto');
+  const detalle = obtenerDetalleProductoImpresion(item);
+  if (!detalle) return nombre;
+  const nombreLower = nombre.toLowerCase();
+  const detalleLower = detalle.toLowerCase();
+  if (nombreLower.includes(detalleLower)) return nombre;
+  return `${nombre}: ${detalle}`;
+}
+
+function obtenerNotaManualProducto(item = {}) {
+  const esManual = Boolean(
+    item?.notaManual ||
+    item?.observacionManual ||
+    String(item?.notaOrigen || '').toLowerCase() === 'manual'
+  );
+
+  if (!esManual) return '';
+
+  const nota = normalizarTextoNotaProducto(item?.nota || item?.observacionProducto || item?.observacion || '');
+  const detalle = obtenerDetalleProductoImpresion(item);
+
+  if (detalle && nota.toLowerCase() === detalle.toLowerCase()) return '';
+  return nota;
+}
+
 function construirListaProductosImpresion(venta = {}, resumido = false) {
   const pedidoImpresion = Array.isArray(venta?.pedido) ? venta.pedido : [];
   if (!pedidoImpresion.length) return '<li>Sin productos</li>';
@@ -6577,8 +6639,8 @@ function construirListaProductosImpresion(venta = {}, resumido = false) {
   if (resumido) {
     const resumen = {};
     pedidoImpresion.forEach(item => {
-      const nombre = String(item?.nombre || 'Producto').trim();
-      const nota = obtenerNotaProducto(item);
+      const nombre = construirNombreConDetalle(item);
+      const nota = obtenerNotaManualProducto(item);
       const clave = `${nombre}__${nota}`;
       if (!resumen[clave]) resumen[clave] = { nombre, nota, cantidad: 0 };
       resumen[clave].cantidad += 1;
@@ -6590,9 +6652,9 @@ function construirListaProductosImpresion(venta = {}, resumido = false) {
 
   return pedidoImpresion
     .map(item => {
-      const nombre = escaparHTMLImpresion(item?.nombre || 'Producto');
+      const nombre = escaparHTMLImpresion(construirNombreConDetalle(item));
       const precio = formatearCOP(item?.precio || 0);
-      const nota = construirNotaHtml(obtenerNotaProducto(item));
+      const nota = construirNotaHtml(obtenerNotaManualProducto(item));
       return `<li>${nombre} - ${precio}${nota}</li>`;
     })
     .join('');
@@ -6607,8 +6669,70 @@ function escaparHTMLImpresion(valor = '') {
     .replace(/'/g, '&#39;');
 }
 
+function normalizarTextoComparacionLP(valor = '') {
+  return String(valor ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function escaparRegExpLP(valor = '') {
+  return String(valor).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function obtenerNombresPedidoParaFiltroObservaciones(venta = {}) {
+  const pedidoVenta = Array.isArray(venta?.pedido) ? venta.pedido : [];
+  const nombres = new Set();
+  pedidoVenta.forEach((item = {}) => {
+    const nombre = String(item?.nombre || '').trim();
+    if (nombre) nombres.add(nombre);
+    const nombreDetalle = String(construirNombreConDetalle ? construirNombreConDetalle(item) : '').trim();
+    if (nombreDetalle) nombres.add(nombreDetalle);
+  });
+  return Array.from(nombres)
+    .map(nombre => ({ original: nombre, normalizado: normalizarTextoComparacionLP(nombre) }))
+    .filter(item => item.normalizado);
+}
+
+function observacionesParecenResumenAutomaticoPedido(texto = '', venta = {}) {
+  const limpio = String(texto || '').trim();
+  if (!limpio) return false;
+  const nombresPedido = obtenerNombresPedidoParaFiltroObservaciones(venta);
+  if (!nombresPedido.length) return false;
+
+  const textoPlano = limpio.replace(/\r/g, '\n');
+  const textoNormalizado = normalizarTextoComparacionLP(textoPlano);
+  const lineas = textoPlano.split(/\n+/).map(l => l.trim()).filter(Boolean);
+
+  let coincidenciasConDosPuntos = 0;
+  let coincidenciasPorLinea = 0;
+
+  nombresPedido.forEach(({ original, normalizado }) => {
+    const patronInicio = new RegExp(`(^|\\n|\\r)\\s*${escaparRegExpLP(original)}\\s*:`, 'i');
+    if (patronInicio.test(textoPlano)) coincidenciasConDosPuntos += 1;
+    if (textoNormalizado.includes(`${normalizado} `) || textoNormalizado === normalizado) coincidenciasPorLinea += 1;
+  });
+
+  // Caso típico que estaba dañando el recibo: Observaciones llenas con "PRODUCTO: detalle".
+  if (coincidenciasConDosPuntos >= 1) return true;
+
+  // Si la observación contiene varios nombres de productos, casi seguro fue generada automáticamente.
+  if (coincidenciasPorLinea >= 2) return true;
+
+  // Si viene de una carga automática del catálogo, no se debe imprimir como observación de cocina.
+  const textoAutoCatalogo = ['pedido recibido desde catalogo', 'pedido recibido desde catálogo'];
+  if (textoAutoCatalogo.some(frase => textoNormalizado.includes(normalizarTextoComparacionLP(frase)))) return true;
+
+  return false;
+}
+
 function obtenerObservacionesImpresion(venta = {}) {
-  return String(venta?.observaciones || venta?.observacion || venta?.nota || '').trim();
+  const texto = String(venta?.observaciones || venta?.observacion || venta?.nota || '').trim();
+  if (!texto) return '';
+  if (observacionesParecenResumenAutomaticoPedido(texto, venta)) return '';
+  return texto;
 }
 
 function construirBloqueObservacionesImpresion(venta = {}) {
@@ -9255,8 +9379,12 @@ function mostrarModuloIndependiente(nombreModulo) {
 
   window.actualizarNotaProductoPedidoPremium = function(index, valor) {
     if (!Array.isArray(pedido) || !pedido[index]) return;
-    pedido[index].nota = valor;
-    pedido[index].observacionProducto = valor;
+    const texto = String(valor || '').trim();
+    pedido[index].nota = texto;
+    pedido[index].observacionProducto = texto;
+    pedido[index].notaManual = Boolean(texto);
+    pedido[index].observacionManual = Boolean(texto);
+    pedido[index].notaOrigen = texto ? 'manual' : '';
   };
 
   function renderPedidoPremium() {
@@ -9271,11 +9399,13 @@ function mostrarModuloIndependiente(nombreModulo) {
     } else {
       pedido.forEach((p, i) => {
         const precio = Number(p.precio || 0);
-        const nota = p.nota || p.observacionProducto || p.observacion || "";
+        const detalle = String(p.detalleProducto || p.variante || p.detalle || '').trim();
+        const nota = (p.notaManual || p.observacionManual || String(p.notaOrigen || '').toLowerCase() === 'manual') ? (p.nota || p.observacionProducto || p.observacion || '') : '';
         const itemHTML = `
           <div class="flex items-start justify-between gap-3">
             <div>
               <p class="font-black text-gray-800">${p.nombre}</p>
+              ${detalle ? `<p class="text-xs font-semibold text-red-700">${detalle}</p>` : ''}
               <p class="text-xs text-gray-500">${money(precio)}</p>
             </div>
             <button type="button" onclick="quitarProducto(${i})" class="shrink-0 bg-red-50 text-red-700 hover:bg-red-100 px-3 py-2 rounded-xl font-semibold">Quitar</button>
@@ -9506,7 +9636,18 @@ function mostrarModuloIndependiente(nombreModulo) {
     const oldAgregarProducto = window.agregarProducto;
     window.agregarProducto = function(nombre, precio, nota = "") {
       try {
-        pedido.push({ nombre, precio: Number(precio || 0), nota, observacionProducto: nota });
+        const detalleAutomatico = String(nota || '').trim();
+        pedido.push({
+          nombre,
+          precio: Number(precio || 0),
+          detalleProducto: detalleAutomatico,
+          variante: detalleAutomatico,
+          nota: '',
+          observacionProducto: '',
+          notaOrigen: detalleAutomatico ? 'auto' : '',
+          notaManual: false,
+          observacionManual: false
+        });
         if (typeof actualizarTotal === "function") actualizarTotal();
         if (typeof actualizarVistaPedido === "function") actualizarVistaPedido();
         emitirSonidoLaParepa("add");
@@ -10409,7 +10550,8 @@ function mostrarModuloIndependiente(nombreModulo) {
             </div>
             <button type="button" onclick="quitarProducto(${i})" class="shrink-0 bg-red-50 text-red-700 hover:bg-red-100 px-3 py-2 rounded-xl font-semibold">Quitar</button>
           </div>
-          <input class="lp-order-note" value="${lpEscapar(p.nota || p.observacionProducto || "")}" placeholder="Nota de cocina para este producto..." oninput="window.actualizarNotaProductoPedidoPremium && window.actualizarNotaProductoPedidoPremium(${i}, this.value)" />
+          ${p.detalleProducto || p.variante || p.detalle ? `<p class="text-xs font-semibold text-red-700 mt-1">${lpEscapar(p.detalleProducto || p.variante || p.detalle)}</p>` : ''}
+          <input class="lp-order-note" value="${lpEscapar((p.notaManual || p.observacionManual || String(p.notaOrigen || '').toLowerCase() === 'manual') ? (p.nota || p.observacionProducto || '') : '')}" placeholder="Nota de cocina solo si este producto requiere algo especial..." oninput="window.actualizarNotaProductoPedidoPremium && window.actualizarNotaProductoPedidoPremium(${i}, this.value)" />
         `;
         ul.appendChild(li);
       });
@@ -10449,11 +10591,17 @@ function mostrarModuloIndependiente(nombreModulo) {
     if (!nombreFinal) return false;
 
     const arr = lpObtenerPedido();
+    const detalleAutomatico = String(nota || '').trim();
     arr.push({
       nombre: nombreFinal,
       precio: Number.isFinite(precioFinal) ? precioFinal : 0,
-      nota: String(nota || ""),
-      observacionProducto: String(nota || "")
+      detalleProducto: detalleAutomatico,
+      variante: detalleAutomatico,
+      nota: '',
+      observacionProducto: '',
+      notaOrigen: detalleAutomatico ? 'auto' : '',
+      notaManual: false,
+      observacionManual: false
     });
 
     lpRefrescarPedido();
@@ -10839,16 +10987,9 @@ function mostrarModuloIndependiente(nombreModulo) {
 
 <script>
 (function(){
-  function ocultarRecuadroObservacionesPedido(){
-    const obs = document.getElementById('observaciones');
-    if (!obs) return;
-    obs.type = 'hidden';
-    obs.className = 'hidden';
-    obs.placeholder = '';
-    obs.setAttribute('aria-hidden', 'true');
-  }
-  document.addEventListener('DOMContentLoaded', ocultarRecuadroObservacionesPedido);
-  setTimeout(ocultarRecuadroObservacionesPedido, 800);
+  // El campo de Observaciones generales debe permanecer visible.
+  // Antes se ocultaba porque las notas por producto se convertían en observaciones generales.
+  // Ahora solo se imprime si el cajero escribe una indicación real para cocina.
 })();
 </script>
 
