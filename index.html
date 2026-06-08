@@ -1759,6 +1759,36 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4" id="qrMesasResultado"></div>
 </div>
 </div>
+
+<main class="p-4 md:p-6 hidden" data-perm-view="rol-home" id="lpRolHome">
+  <div class="max-w-7xl mx-auto space-y-6">
+    <section class="rounded-[2rem] overflow-hidden shadow-xl border border-red-100 bg-white">
+      <div class="bg-gradient-to-r from-red-800 via-red-700 to-red-600 text-white p-6 md:p-8">
+        <p class="text-xs md:text-sm uppercase tracking-[0.24em] text-red-100 font-black">Panel personalizado</p>
+        <h2 class="text-3xl md:text-4xl font-black mt-2">Bienvenido a La Parepa</h2>
+        <p class="text-red-100 mt-2" id="lpRolHomeSubtitulo">Cargando permisos del usuario...</p>
+      </div>
+      <div class="p-5 md:p-7 bg-gradient-to-br from-amber-50 via-orange-50 to-red-50">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-white rounded-3xl border border-red-100 shadow-sm p-5">
+            <p class="text-xs uppercase tracking-wide font-black text-red-600">Usuario</p>
+            <p class="text-xl font-black text-gray-900 mt-1" id="lpRolHomeUsuario">-</p>
+          </div>
+          <div class="bg-white rounded-3xl border border-red-100 shadow-sm p-5">
+            <p class="text-xs uppercase tracking-wide font-black text-red-600">Rol activo</p>
+            <p class="text-xl font-black text-gray-900 mt-1" id="lpRolHomeRol">-</p>
+          </div>
+          <div class="bg-white rounded-3xl border border-red-100 shadow-sm p-5">
+            <p class="text-xs uppercase tracking-wide font-black text-red-600">Acceso</p>
+            <p class="text-xl font-black text-gray-900 mt-1" id="lpRolHomeAcceso">Permisos verificados</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="lpRolHomeCards"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
 </div>
 <script>
       let pedido = [];
@@ -3973,6 +4003,7 @@ function limpiarSesionLocal() {
   localStorage.removeItem("usuarioActual");
   localStorage.removeItem("usuarioEmailActual");
   localStorage.setItem("sesionActiva", "false");
+  window.LP_PERFIL_FIREBASE_ACTUAL = null;
   aplicarPermisosPorRol();
 }
 
@@ -4477,11 +4508,30 @@ async function inicializarFirebaseVentas() {
       return;
     }
 
-    const registroAuth = resolverRegistroUsuario(usuarioFirebase.email || "");
-    if (!registroAuth) {
+    // Antes este punto solo aceptaba los usuarios quemados en el HTML
+    // (admin, administrador y cajero local). Por eso los usuarios creados
+    // desde el panel Admin entraban un segundo y el sistema los devolvía
+    // al login. Ahora se valida primero contra usuariosSistema en Firestore
+    // y, si existe un rol pendiente, se activa automáticamente.
+    let perfilSistema = null;
+    if (typeof obtenerPerfilUsuarioSistema === 'function') {
+      perfilSistema = await obtenerPerfilUsuarioSistema(usuarioFirebase);
+    }
+
+    const registroLocal = resolverRegistroUsuario(usuarioFirebase.email || "");
+    const perfilFinal = perfilSistema || (registroLocal ? {
+      uid: usuarioFirebase.uid,
+      nombre: registroLocal.nombre || registroLocal.usuario || registroLocal.email,
+      email: registroLocal.email || usuarioFirebase.email || "",
+      rol: registroLocal.rol,
+      activo: true,
+      origen: 'local'
+    } : null);
+
+    if (!perfilFinal || !normalizarRolSistema(perfilFinal.rol) || !LP_PERMISOS[normalizarRolSistema(perfilFinal.rol)] || perfilFinal.activo === false) {
       try { await firebaseAuth.signOut(); } catch (_) {}
       limpiarSesionLocal();
-      actualizarIndicadorFirebase("local", "Usuario de Firebase no autorizado en este POS.");
+      actualizarIndicadorFirebase("local", "Usuario de Firebase sin rol activo en usuariosSistema.");
       cargarCatalogoProductos();
       mostrarVentas();
       refrescarVistasAnaliticasSiEstanAbiertas();
@@ -4489,17 +4539,30 @@ async function inicializarFirebaseVentas() {
       return;
     }
 
-    aplicarSesionAutenticada(registroAuth.usuario, registroAuth.rol, registroAuth.email || usuarioFirebase.email || "");
+    aplicarSesionAutenticada(perfilFinal.nombre || perfilFinal.email, normalizarRolSistema(perfilFinal.rol), perfilFinal.email || usuarioFirebase.email || "");
+    window.usuarioActualUid = usuarioFirebase.uid;
+    localStorage.setItem('usuarioActualUid', usuarioFirebase.uid);
+
     authDisponible = true;
     firestoreDisponible = true;
     registrarHeartbeatFirebase();
     cargarCatalogoProductos();
     guardarVentasEnCache(ordenarVentasDesc(obtenerVentasStorage()));
-    escucharVentasFirestore();
+
+    if (puedeAccederSistema('ventas') || puedeAccederSistema('historicos')) {
+      escucharVentasFirestore();
+    }
     escucharCatalogoFirestore();
-    escucharInventarioFirestore();
-    escucharPedidosCatalogoFirestore();
-    programarSyncVentasPendientes(300);
+    if (puedeAccederSistema('inventario')) {
+      escucharInventarioFirestore();
+    } else {
+      inventarioBebidasEstado = obtenerMapaInventarioLocal();
+      actualizarAlertasStockBebidas(inventarioBebidasEstado);
+    }
+    if (puedeAccederSistema('ventas')) {
+      escucharPedidosCatalogoFirestore();
+      programarSyncVentasPendientes(300);
+    }
     iniciarMonitorConexionFirebase();
   } catch (error) {
     console.error("No se pudo iniciar Firebase:", error);
@@ -5357,7 +5420,613 @@ function cancelarPedidoActual() {
 
     if (popupImpresionCocina) {
       try {
-        popupImpresionCocina.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Preparando recibo cocina</title></head><body style="font-family:sans-serif;padding:16px;">Preparando recibo de cocina...</body></html>');
+        popupImpresionCocina.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Preparando recibo cocina</title></head><body style="font-family:sans-serif;padding:16px;">Preparando recibo de cocina...
+<script id="lp-roles-interfaces-final-fix">
+(function(){
+  const LP_UI_ROLES = {
+    admin: 'Administrador',
+    administrador: 'Administrador',
+    cajero: 'Cajero',
+    contador: 'Contabilidad',
+    contabilidad: 'Contabilidad'
+  };
+
+  const LP_UI_PERMISOS = {
+    admin: { ventas:true, inventario:true, caja:true, finanzas:true, nomina:true, historicos:true, domicilios:true, menu:true, usuarios:true, admin:true },
+    administrador: { ventas:true, inventario:true, caja:true, finanzas:true, nomina:true, historicos:true, domicilios:true, menu:true, usuarios:true, admin:true },
+    cajero: { ventas:true, inventario:true, caja:true, finanzas:false, nomina:false, historicos:false, domicilios:false, menu:false, usuarios:false, admin:false },
+    contador: { ventas:false, inventario:false, caja:true, finanzas:true, nomina:true, historicos:true, domicilios:false, menu:false, usuarios:false, admin:false },
+    contabilidad: { ventas:false, inventario:false, caja:true, finanzas:true, nomina:true, historicos:true, domicilios:false, menu:false, usuarios:false, admin:false }
+  };
+
+  window.normalizarRolSistema = function normalizarRolSistema(rol='') {
+    const value = String(rol || '').trim().toLowerCase();
+    if (['admin','administrador','cajero','contador'].includes(value)) return value;
+    if (value.includes('contab')) return 'contador';
+    return '';
+  };
+
+  window.rolNombreVisible = function rolNombreVisible(rol = window.rolActual) {
+    const normalizado = normalizarRolSistema(rol);
+    return LP_UI_ROLES[normalizado] || 'Sin rol';
+  };
+
+  window.esSuperAdminSistema = function esSuperAdminSistema() {
+    return ['admin', 'administrador'].includes(normalizarRolSistema(window.rolActual));
+  };
+  window.esAdmin = window.esSuperAdminSistema;
+  window.esAdministrador = window.esSuperAdminSistema;
+  window.esContador = function esContador(){ return normalizarRolSistema(window.rolActual) === 'contador'; };
+  window.esCajero = function esCajero(){ return normalizarRolSistema(window.rolActual) === 'cajero'; };
+  window.tieneAccesoGestion = function tieneAccesoGestion(){ return window.esSuperAdminSistema(); };
+  window.puedeVerFinanzas = function puedeVerFinanzas(){ return window.puedeAccederSistema('finanzas'); };
+  window.tieneRolValido = function tieneRolValido(){ return Boolean(LP_UI_PERMISOS[normalizarRolSistema(window.rolActual)]); };
+  window.puedeAccederSistema = function puedeAccederSistema(permiso) {
+    const rol = normalizarRolSistema(window.rolActual);
+    return Boolean((LP_UI_PERMISOS[rol] || {})[permiso]);
+  };
+  window.verificarAcceso = function verificarAcceso(rolesPermitidos = []) {
+    const roles = (Array.isArray(rolesPermitidos) ? rolesPermitidos : [rolesPermitidos]).map(normalizarRolSistema).filter(Boolean);
+    const rol = normalizarRolSistema(window.rolActual);
+    if (roles.includes(rol)) return true;
+    if ((roles.includes('admin') || roles.includes('administrador')) && window.esSuperAdminSistema()) return true;
+    alert('No tienes permiso para realizar esta acción.');
+    return false;
+  };
+
+  function emailNormalizado(email='') {
+    return String(email || '').trim().toLowerCase();
+  }
+
+  window.normalizarEmailIdSistema = function normalizarEmailIdSistema(email = '') {
+    return emailNormalizado(email).replace(/\//g, '_');
+  };
+
+  window.resolverEmailIngreso = function resolverEmailIngreso(entradaUsuario = '') {
+    const valor = String(entradaUsuario || '').trim().toLowerCase();
+    const local = typeof resolverRegistroUsuario === 'function' ? resolverRegistroUsuario(valor) : null;
+    if (local?.email) return local.email;
+    if (valor.includes('@')) return valor;
+    return `${valor}@laparepa.com`;
+  };
+
+  async function dbUsuarios() {
+    if (typeof prepararFirebaseAuthBase === 'function') await prepararFirebaseAuthBase();
+    if (!window.firestoreDb && window.firebase?.firestore) window.firestoreDb = firebase.firestore();
+    return window.firestoreDb || firebase.firestore();
+  }
+
+  async function guardarPerfilUsuarioSistemaCompleto({ uid, nombre, email, rol, activo = true, origen = 'admin' }) {
+    if (!uid || !email || !normalizarRolSistema(rol)) throw new Error('Faltan datos para guardar el perfil del usuario.');
+    const db = await dbUsuarios();
+    const emailId = normalizarEmailIdSistema(email);
+    const payload = {
+      uid,
+      nombre: nombre || email,
+      email: emailNormalizado(email),
+      rol: normalizarRolSistema(rol),
+      activo: activo !== false,
+      origen,
+      creadoPor: window.usuarioActual || '',
+      creadoPorUid: localStorage.getItem('usuarioActualUid') || window.usuarioActualUid || '',
+      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    await db.collection('usuariosSistema').doc(uid).set({
+      ...payload,
+      creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    // Espejo por correo. Ayuda a reparar cuentas existentes de Authentication y a diagnosticar accesos.
+    try {
+      await db.collection('usuariosSistemaPorEmail').doc(emailId).set(payload, { merge: true });
+    } catch (e) {
+      console.warn('No se pudo guardar el espejo usuariosSistemaPorEmail:', e);
+    }
+
+    try { await db.collection('usuariosSistemaPendientes').doc(emailId).delete(); } catch (_) {}
+    return payload;
+  }
+
+  window.crearRegistroPendienteUsuarioSistema = async function crearRegistroPendienteUsuarioSistema({ nombre = '', email = '', rol = '', origen = 'pendiente_admin' } = {}) {
+    const emailId = normalizarEmailIdSistema(email);
+    const rolNormalizado = normalizarRolSistema(rol);
+    if (!emailId || !rolNormalizado) return false;
+    const db = await dbUsuarios();
+    await db.collection('usuariosSistemaPendientes').doc(emailId).set({
+      nombre: nombre || emailId,
+      email: emailNormalizado(email),
+      rol: rolNormalizado,
+      activo: true,
+      origen,
+      creadoPor: window.usuarioActual || '',
+      creadoPorUid: localStorage.getItem('usuarioActualUid') || window.usuarioActualUid || '',
+      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp(),
+      creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    return true;
+  };
+
+  window.intentarActivarRolPendienteUsuario = async function intentarActivarRolPendienteUsuario(user) {
+    if (!user?.email) return null;
+    const email = emailNormalizado(user.email);
+    const emailId = normalizarEmailIdSistema(email);
+    try {
+      const db = await dbUsuarios();
+      const pendienteRef = db.collection('usuariosSistemaPendientes').doc(emailId);
+      const pendienteDoc = await pendienteRef.get();
+      if (!pendienteDoc.exists) return null;
+      const data = pendienteDoc.data() || {};
+      const rol = normalizarRolSistema(data.rol);
+      if (!rol || !LP_UI_PERMISOS[rol] || data.activo === false) return null;
+      const perfil = await guardarPerfilUsuarioSistemaCompleto({
+        uid: user.uid,
+        nombre: data.nombre || user.displayName || email,
+        email,
+        rol,
+        activo: true,
+        origen: data.origen || 'pendiente_admin_activado'
+      });
+      return perfil;
+    } catch (error) {
+      console.warn('No se pudo activar el rol pendiente:', error);
+      return null;
+    }
+  };
+
+  window.obtenerPerfilUsuarioSistema = async function obtenerPerfilUsuarioSistema(user) {
+    if (!user) return null;
+    const email = emailNormalizado(user.email);
+    let perfil = null;
+    try {
+      const db = await dbUsuarios();
+      const doc = await db.collection('usuariosSistema').doc(user.uid).get();
+      if (doc.exists) perfil = { uid: user.uid, ...doc.data() };
+    } catch (e) {
+      console.warn('No se pudo leer usuariosSistema por UID:', e);
+    }
+
+    if (!perfil) {
+      perfil = await intentarActivarRolPendienteUsuario(user);
+    }
+
+    if (!perfil) {
+      try {
+        const db = await dbUsuarios();
+        const mirror = await db.collection('usuariosSistemaPorEmail').doc(normalizarEmailIdSistema(email)).get();
+        if (mirror.exists) {
+          const data = mirror.data() || {};
+          const rol = normalizarRolSistema(data.rol);
+          if (rol && LP_UI_PERMISOS[rol] && data.activo !== false) {
+            await guardarPerfilUsuarioSistemaCompleto({
+              uid: user.uid,
+              nombre: data.nombre || user.displayName || email,
+              email,
+              rol,
+              activo: true,
+              origen: 'reparado_desde_email'
+            });
+            perfil = { uid: user.uid, ...data, rol, activo: true };
+          }
+        }
+      } catch (e) {
+        console.warn('No se pudo leer usuariosSistemaPorEmail:', e);
+      }
+    }
+
+    if (!perfil && typeof resolverRegistroUsuario === 'function') {
+      const local = resolverRegistroUsuario(email);
+      if (local?.rol) perfil = { uid: user.uid, email, nombre: local.nombre || local.usuario || email, rol: local.rol, activo: true, origen: 'local' };
+    }
+
+    if (!perfil) return null;
+    perfil.rol = normalizarRolSistema(perfil.rol);
+    perfil.email = emailNormalizado(perfil.email || email);
+    perfil.nombre = perfil.nombre || perfil.usuario || perfil.email;
+    perfil.activo = perfil.activo !== false;
+    return perfil;
+  };
+
+  window.aplicarPermisosPorRol = function aplicarPermisosPorRol() {
+    const rolValido = Boolean(window.sesionActiva && window.tieneRolValido());
+    const loginScreen = document.getElementById('loginScreen');
+    const appContent = document.getElementById('appContent');
+    if (loginScreen) loginScreen.classList.toggle('hidden', rolValido);
+    if (appContent) appContent.classList.toggle('hidden', !rolValido);
+
+    ['rolActualTexto', 'rolActualTextoDesktop'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = rolNombreVisible();
+    });
+    ['usuarioActualTexto', 'usuarioActualTextoDesktop'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = window.usuarioActual || 'Sin usuario';
+    });
+
+    document.querySelectorAll('[data-perm]').forEach(el => {
+      const permiso = el.getAttribute('data-perm');
+      const permitido = window.puedeAccederSistema(permiso);
+      el.classList.toggle('hidden', !permitido);
+      el.style.display = permitido ? '' : 'none';
+      if ('disabled' in el) el.disabled = !permitido;
+    });
+
+    document.querySelectorAll('[data-role="admin-only"]').forEach(el => {
+      const permitido = window.esSuperAdminSistema();
+      el.classList.toggle('hidden', !permitido);
+      el.style.display = permitido ? '' : 'none';
+    });
+
+    document.querySelectorAll('[data-role="gestion-only"]:not([data-perm])').forEach(el => {
+      const permitido = window.esSuperAdminSistema();
+      el.classList.toggle('hidden', !permitido);
+      el.style.display = permitido ? '' : 'none';
+    });
+
+    document.querySelectorAll('[data-role="finanzas-only"]:not([data-perm])').forEach(el => {
+      const permitido = window.puedeAccederSistema('finanzas');
+      el.classList.toggle('hidden', !permitido);
+      el.style.display = permitido ? '' : 'none';
+    });
+
+    document.querySelectorAll('[data-perm-view]').forEach(el => {
+      const permiso = el.getAttribute('data-perm-view');
+      if (permiso === 'rol-home') return;
+      if (!window.puedeAccederSistema(permiso)) el.classList.add('hidden');
+    });
+
+    const quick = document.getElementById('mobileQuickBar');
+    if (quick) {
+      const visible = rolValido && window.puedeAccederSistema('ventas');
+      quick.classList.toggle('hidden', !visible);
+      quick.style.display = visible ? '' : 'none';
+    }
+
+    const loginError = document.getElementById('loginError');
+    if (loginError && rolValido) loginError.classList.add('hidden');
+  };
+
+  function cardRol({ titulo, texto, icono, color, accion, permiso }) {
+    if (permiso && !window.puedeAccederSistema(permiso)) return '';
+    return `<button type="button" onclick="${accion}" class="text-left bg-white rounded-3xl border border-red-100 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition p-5 min-h-[150px]">
+      <div class="w-12 h-12 rounded-2xl ${color || 'bg-red-100 text-red-700'} flex items-center justify-center text-2xl mb-4">${icono || '📌'}</div>
+      <h3 class="text-lg font-black text-gray-900">${titulo}</h3>
+      <p class="text-sm text-gray-600 mt-1 leading-5">${texto}</p>
+    </button>`;
+  }
+
+  window.renderizarPanelRolActual = function renderizarPanelRolActual() {
+    const rol = normalizarRolSistema(window.rolActual);
+    const cards = document.getElementById('lpRolHomeCards');
+    const usuario = document.getElementById('lpRolHomeUsuario');
+    const rolLabel = document.getElementById('lpRolHomeRol');
+    const subtitulo = document.getElementById('lpRolHomeSubtitulo');
+    const acceso = document.getElementById('lpRolHomeAcceso');
+    if (usuario) usuario.textContent = window.usuarioActual || 'Usuario';
+    if (rolLabel) rolLabel.textContent = rolNombreVisible(rol);
+    if (acceso) acceso.textContent = 'Interfaz cargada según rol';
+
+    let intro = 'Selecciona el módulo autorizado para continuar.';
+    let html = '';
+
+    if (window.esSuperAdminSistema()) {
+      intro = 'Tienes control completo del sistema: ventas, usuarios, inventario, reportes, finanzas y nómina.';
+      html += cardRol({titulo:'Nueva venta', texto:'Registrar pedidos, imprimir cliente y cocina.', icono:'🧾', color:'bg-amber-100 text-amber-800', accion:'volverAlPOS()', permiso:'ventas'});
+      html += cardRol({titulo:'Cierre de caja', texto:'Abrir caja, cerrar el día y revisar movimientos.', icono:'💰', color:'bg-green-100 text-green-800', accion:'abrirCajaVista()', permiso:'caja'});
+      html += cardRol({titulo:'Inventario', texto:'Controlar productos y stock de bebidas.', icono:'📦', color:'bg-orange-100 text-orange-800', accion:"window.location.href='inventario.html'", permiso:'inventario'});
+      html += cardRol({titulo:'Finanzas', texto:'Revisar ingresos, gastos, nómina y cierres.', icono:'📋', color:'bg-red-100 text-red-800', accion:"window.location.href='finanzas.html'", permiso:'finanzas'});
+      html += cardRol({titulo:'Nómina', texto:'Gestionar empleados, pagos y recibos.', icono:'👥', color:'bg-purple-100 text-purple-800', accion:"window.location.href='nomina.html'", permiso:'nomina'});
+      html += cardRol({titulo:'Históricos', texto:'Consultar ventas y cierres anteriores.', icono:'📈', color:'bg-blue-100 text-blue-800', accion:'abrirHistoricos()', permiso:'historicos'});
+      html += cardRol({titulo:'Usuarios', texto:'Crear usuarios y asignar permisos.', icono:'👤', color:'bg-gray-100 text-gray-800', accion:'abrirUsuariosAdminVista()', permiso:'usuarios'});
+      html += cardRol({titulo:'Menú digital', texto:'Actualizar productos del catálogo y QR.', icono:'🖼️', color:'bg-pink-100 text-pink-800', accion:'abrirEditorCatalogo()', permiso:'admin'});
+    } else if (rol === 'cajero') {
+      intro = 'Interfaz de cajero: ventas, inventario y caja. Las demás opciones quedan ocultas.';
+      html += cardRol({titulo:'Panel de ventas', texto:'Tomar pedidos y enviar recibo a cocina.', icono:'🧾', color:'bg-amber-100 text-amber-800', accion:'volverAlPOS()', permiso:'ventas'});
+      html += cardRol({titulo:'Cierre de caja', texto:'Abrir caja y registrar cierre del día.', icono:'💰', color:'bg-green-100 text-green-800', accion:'abrirCajaVista()', permiso:'caja'});
+      html += cardRol({titulo:'Inventario', texto:'Consultar y actualizar stock autorizado.', icono:'📦', color:'bg-orange-100 text-orange-800', accion:"window.location.href='inventario.html'", permiso:'inventario'});
+    } else if (rol === 'contador') {
+      intro = 'Interfaz de contabilidad: finanzas, nómina, históricos y cierre del día.';
+      html += cardRol({titulo:'Finanzas', texto:'Revisar ingresos, gastos y movimientos automáticos.', icono:'📋', color:'bg-red-100 text-red-800', accion:"window.location.href='finanzas.html'", permiso:'finanzas'});
+      html += cardRol({titulo:'Nómina', texto:'Gestionar pagos, empleados y reportes.', icono:'👥', color:'bg-purple-100 text-purple-800', accion:"window.location.href='nomina.html'", permiso:'nomina'});
+      html += cardRol({titulo:'Históricos', texto:'Consultar ventas y reportes anteriores.', icono:'📈', color:'bg-blue-100 text-blue-800', accion:'abrirHistoricos()', permiso:'historicos'});
+      html += cardRol({titulo:'Cierre del día', texto:'Revisar caja y cierres diarios.', icono:'💰', color:'bg-green-100 text-green-800', accion:'abrirCajaVista()', permiso:'caja'});
+    }
+
+    if (subtitulo) subtitulo.textContent = intro;
+    if (cards) cards.innerHTML = html || '<div class="bg-white rounded-3xl p-5 text-red-700 font-bold border border-red-100">Este usuario no tiene módulos asignados.</div>';
+  };
+
+  window.ocultarTodasLasVistasSistema = function ocultarTodasLasVistasSistema() {
+    ['lpRolHome','appMain','historicosVista','cajaVista','domiciliosVista','menuDigitalVista','adminUsuariosVista','dashboardPremium','cocinaVistaPremium'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    });
+  };
+
+  window.abrirPanelRol = function abrirPanelRol() {
+    if (!window.tieneRolValido()) return;
+    window.ocultarTodasLasVistasSistema();
+    renderizarPanelRolActual();
+    const home = document.getElementById('lpRolHome');
+    if (home) home.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  window.abrirVistaInicialSegunRol = function abrirVistaInicialSegunRol() {
+    window.aplicarPermisosPorRol();
+    const rol = normalizarRolSistema(window.rolActual);
+    if (rol === 'cajero') {
+      window.ocultarTodasLasVistasSistema();
+      const appMain = document.getElementById('appMain');
+      if (appMain) appMain.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    window.abrirPanelRol();
+  };
+
+  const oldVolverAlPOS = window.volverAlPOS;
+  window.volverAlPOS = function volverAlPOS() {
+    if (!window.puedeAccederSistema('ventas')) {
+      window.abrirPanelRol();
+      return;
+    }
+    window.ocultarTodasLasVistasSistema();
+    const appMain = document.getElementById('appMain');
+    if (appMain) appMain.classList.remove('hidden');
+    try { if (typeof cerrarMobileMenu === 'function') cerrarMobileMenu(); } catch (_) {}
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const oldAbrirCaja = window.abrirCajaVista;
+  window.abrirCajaVista = async function abrirCajaVista() {
+    if (!window.puedeAccederSistema('caja')) return alert('No tienes permiso para acceder al cierre del día.');
+    window.ocultarTodasLasVistasSistema();
+    const cajaVista = document.getElementById('cajaVista');
+    if (cajaVista) cajaVista.classList.remove('hidden');
+    try { await renderControlCajaDiaActual?.(true); } catch (_) {}
+    try { renderTablaCierresCaja?.(true); } catch (_) {}
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const oldAbrirHistoricos = window.abrirHistoricos;
+  window.abrirHistoricos = function abrirHistoricos() {
+    if (!window.puedeAccederSistema('historicos')) return alert('No tienes permiso para acceder a históricos.');
+    window.ocultarTodasLasVistasSistema();
+    const vista = document.getElementById('historicosVista');
+    if (vista) vista.classList.remove('hidden');
+    try { actualizarHistoricos?.(); } catch (_) {}
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  window.abrirUsuariosAdminVista = async function abrirUsuariosAdminVista() {
+    if (!window.puedeAccederSistema('usuarios')) return alert('No tienes permiso para administrar usuarios.');
+    window.ocultarTodasLasVistasSistema();
+    const vista = document.getElementById('adminUsuariosVista');
+    if (vista) vista.classList.remove('hidden');
+    await window.cargarUsuariosSistemaAdmin?.();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  window.inicializarFirebaseVentas = async function inicializarFirebaseVentas() {
+    try {
+      await prepararFirebaseAuthBase();
+      const user = firebaseAuth.currentUser || await esperarUsuarioFirebaseActual(2500);
+      if (!user) {
+        if (typeof actualizarIndicadorFirebase === 'function') actualizarIndicadorFirebase('local', 'Sesión de Firebase no detectada.');
+        return;
+      }
+      window.authDisponible = true;
+      window.firestoreDisponible = Boolean(firestoreDb);
+      window.firebaseInicializado = true;
+      try { registrarHeartbeatFirebase?.(); } catch (_) {}
+      try { cargarCatalogoProductos?.(); } catch (e) { console.warn('Catálogo local/remoto no cargó:', e); }
+      try { guardarVentasEnCache?.(ordenarVentasDesc?.(obtenerVentasStorage?.() || []) || []); } catch (_) {}
+      if (window.puedeAccederSistema('ventas') || window.puedeAccederSistema('historicos')) {
+        try { escucharVentasFirestore?.(); } catch (e) { console.warn('No se pudo escuchar ventas:', e); }
+      }
+      if (window.puedeAccederSistema('inventario')) {
+        try { escucharInventarioFirestore?.(); } catch (e) { console.warn('No se pudo escuchar inventario:', e); }
+      } else {
+        try {
+          window.inventarioBebidasEstado = obtenerMapaInventarioLocal?.() || {};
+          actualizarAlertasStockBebidas?.(window.inventarioBebidasEstado);
+        } catch (_) {}
+      }
+      if (window.puedeAccederSistema('ventas')) {
+        try { escucharPedidosCatalogoFirestore?.(); } catch (e) { console.warn('No se pudo escuchar pedidos catálogo:', e); }
+        try { programarSyncVentasPendientes?.(300); } catch (_) {}
+      }
+      try { iniciarMonitorConexionFirebase?.(); } catch (_) {}
+      if (typeof actualizarIndicadorFirebase === 'function') actualizarIndicadorFirebase('ok', 'Firebase conectado con permisos del rol.');
+    } catch (e) {
+      console.error('No se pudo inicializar Firebase para el rol actual:', e);
+      if (typeof actualizarIndicadorFirebase === 'function') actualizarIndicadorFirebase('local', 'Firebase no disponible. Usando vista permitida.');
+    }
+  };
+
+  window.iniciarSesion = async function iniciarSesion() {
+    const usuario = document.getElementById('loginUsuario')?.value.trim();
+    const clave = document.getElementById('loginClave')?.value || '';
+    const error = document.getElementById('loginError');
+    const mostrarError = (mensaje, amber=false) => {
+      if (!error) return;
+      error.textContent = mensaje;
+      error.classList.remove('hidden');
+      error.classList.toggle('text-red-600', !amber);
+      error.classList.toggle('text-amber-700', amber);
+    };
+    if (!usuario || !clave) return mostrarError('Ingresa correo/usuario y contraseña.');
+    const emailAuth = resolverEmailIngreso(usuario);
+    try {
+      mostrarError('Validando acceso y cargando interfaz del rol...', true);
+      await prepararFirebaseAuthBase();
+      const cred = await firebaseAuth.signInWithEmailAndPassword(emailAuth, clave);
+      const perfil = await obtenerPerfilUsuarioSistema(cred.user);
+      if (!perfil || !perfil.rol || !LP_UI_PERMISOS[perfil.rol]) {
+        try { await firebaseAuth.signOut(); } catch (_) {}
+        if (typeof limpiarSesionLocal === 'function') limpiarSesionLocal();
+        return mostrarError('Este correo existe en Authentication, pero todavía no tiene rol en usuariosSistema. Entra como administrador, créalo en Usuarios y verifica que quede en la tabla de usuarios registrados.');
+      }
+      if (perfil.activo === false) {
+        try { await firebaseAuth.signOut(); } catch (_) {}
+        if (typeof limpiarSesionLocal === 'function') limpiarSesionLocal();
+        return mostrarError('Este usuario está desactivado. Consulta con un administrador.');
+      }
+      window.firebaseInicializado = false;
+      window.usuarioActualUid = cred.user.uid;
+      window.LP_PERFIL_FIREBASE_ACTUAL = perfil;
+      localStorage.setItem('usuarioActualUid', cred.user.uid);
+      if (typeof aplicarSesionAutenticada === 'function') {
+        aplicarSesionAutenticada(perfil.nombre || perfil.email, perfil.rol, perfil.email);
+      } else {
+        window.usuarioActual = perfil.nombre || perfil.email;
+        window.rolActual = perfil.rol;
+        window.sesionActiva = true;
+      }
+      if (error) error.classList.add('hidden');
+      ['loginClave','loginUsuario'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      const toggle = document.getElementById('toggleClave');
+      if (toggle) toggle.checked = false;
+      try { toggleVerClave?.(); } catch (_) {}
+      window.aplicarPermisosPorRol();
+      await window.inicializarFirebaseVentas();
+      if (window.puedeAccederSistema('caja')) {
+        try { await renderControlCajaDiaActual?.(true); } catch (_) {}
+        try { renderTablaCierresCaja?.(false); } catch (_) {}
+      }
+      window.abrirVistaInicialSegunRol();
+    } catch (authError) {
+      console.error('No se pudo iniciar sesión:', authError);
+      if (typeof limpiarSesionLocal === 'function') limpiarSesionLocal();
+      mostrarError(typeof obtenerMensajeErrorAuth === 'function' ? obtenerMensajeErrorAuth(authError) : 'No se pudo iniciar sesión.');
+      if (typeof actualizarIndicadorFirebase === 'function') actualizarIndicadorFirebase('local', 'Inicio de sesión no validado.');
+    }
+  };
+
+  window.crearUsuarioSistemaDesdeAdmin = async function crearUsuarioSistemaDesdeAdmin(event) {
+    event?.preventDefault?.();
+    if (!window.puedeAccederSistema('usuarios')) return alert('No tienes permiso para crear usuarios.');
+    const nombre = document.getElementById('nuevoUsuarioNombre')?.value.trim();
+    const email = emailNormalizado(document.getElementById('nuevoUsuarioEmail')?.value);
+    const clave = document.getElementById('nuevoUsuarioClave')?.value || '';
+    const rol = normalizarRolSistema(document.getElementById('nuevoUsuarioRol')?.value);
+    const btn = document.getElementById('btnCrearUsuarioSistema');
+    const msg = (texto, tipo='info') => {
+      if (typeof mostrarMensajeUsuariosAdmin === 'function') mostrarMensajeUsuariosAdmin(texto, tipo);
+      else alert(texto);
+    };
+    if (!nombre || !email || !clave || !rol) return msg('Completa nombre, correo, contraseña y rol.', 'error');
+    if (clave.length < 6) return msg('La contraseña debe tener mínimo 6 caracteres.', 'error');
+    let secondaryApp = null;
+    let secondaryAuth = null;
+    const cerrarSecundaria = async () => {
+      try { await secondaryAuth?.signOut?.(); } catch (_) {}
+      try { await secondaryApp?.delete?.(); } catch (_) {}
+      secondaryApp = null;
+      secondaryAuth = null;
+    };
+    try {
+      if (btn) { btn.disabled = true; btn.textContent = 'Creando usuario...'; }
+      await prepararFirebaseAuthBase();
+      const appName = `lpUserCreator_${Date.now()}_${Math.floor(Math.random()*99999)}`;
+      secondaryApp = firebase.initializeApp(firebaseConfig, appName);
+      secondaryAuth = secondaryApp.auth();
+      msg('Creando cuenta en Authentication y guardando rol en Firestore...', 'info');
+      try {
+        const cred = await secondaryAuth.createUserWithEmailAndPassword(email, clave);
+        try { await cred.user.updateProfile({ displayName: nombre }); } catch (_) {}
+        await guardarPerfilUsuarioSistemaCompleto({ uid: cred.user.uid, nombre, email, rol, activo: true, origen: 'creado_desde_admin' });
+        await cerrarSecundaria();
+        document.getElementById('formCrearUsuarioSistema')?.reset();
+        msg(`Usuario creado y guardado correctamente: ${email} (${rolNombreVisible(rol)})`, 'ok');
+        await window.cargarUsuariosSistemaAdmin?.();
+        return;
+      } catch (errorCrearAuth) {
+        if (!String(errorCrearAuth?.code || '').includes('email-already-in-use')) throw errorCrearAuth;
+        msg('El correo ya existe en Authentication. Intentando enlazarlo con la contraseña escrita...', 'info');
+        try {
+          const credExistente = await secondaryAuth.signInWithEmailAndPassword(email, clave);
+          await guardarPerfilUsuarioSistemaCompleto({ uid: credExistente.user.uid, nombre, email, rol, activo: true, origen: 'auth_existente_vinculado' });
+          await cerrarSecundaria();
+          document.getElementById('formCrearUsuarioSistema')?.reset();
+          msg(`El correo ya existía. Rol guardado correctamente: ${email} (${rolNombreVisible(rol)})`, 'ok');
+          await window.cargarUsuariosSistemaAdmin?.();
+          return;
+        } catch (errorLoginExistente) {
+          console.warn('No se pudo iniciar la cuenta existente con esa clave:', errorLoginExistente);
+          await cerrarSecundaria();
+          const uidManual = prompt('Ese correo ya existe en Authentication, pero la contraseña escrita no coincide.\n\nAbre Firebase Console > Authentication > Users, copia el UID de ese correo y pégalo aquí para guardar el rol en usuariosSistema:');
+          if (uidManual && uidManual.trim()) {
+            await guardarPerfilUsuarioSistemaCompleto({ uid: uidManual.trim(), nombre, email, rol, activo: true, origen: 'auth_existente_uid_manual' });
+            document.getElementById('formCrearUsuarioSistema')?.reset();
+            msg(`Rol guardado para el usuario existente: ${email} (${rolNombreVisible(rol)})`, 'ok');
+            await window.cargarUsuariosSistemaAdmin?.();
+            return;
+          }
+          await window.crearRegistroPendienteUsuarioSistema({ nombre, email, rol, origen: 'pendiente_auth_existente' });
+          document.getElementById('formCrearUsuarioSistema')?.reset();
+          msg(`El correo ya existe. Dejé el rol pendiente; al iniciar sesión se activará y se creará usuariosSistema con su UID.`, 'ok');
+          await window.cargarUsuariosSistemaAdmin?.();
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('Error creando usuario:', e);
+      await cerrarSecundaria();
+      let texto = 'No se pudo crear el usuario ni guardar el rol.';
+      if (String(e?.code || '').includes('permission-denied')) texto = 'No hay permisos para guardar usuariosSistema. Revisa las reglas de Firestore.';
+      if (String(e?.code || '').includes('weak-password')) texto = 'La contraseña es muy débil. Usa mínimo 6 caracteres.';
+      if (String(e?.code || '').includes('invalid-email')) texto = 'El correo no tiene formato válido.';
+      msg(texto, 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Crear usuario'; }
+    }
+  };
+
+  window.cargarUsuariosSistemaAdmin = async function cargarUsuariosSistemaAdmin() {
+    const tbody = document.getElementById('tablaUsuariosSistema');
+    if (!tbody) return;
+    if (!window.puedeAccederSistema('usuarios')) {
+      tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-600">Sin permisos.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Cargando usuarios...</td></tr>';
+    try {
+      const db = await dbUsuarios();
+      const snap = await db.collection('usuariosSistema').get();
+      const rows = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() })).sort((a,b)=>String(a.nombre||a.email||'').localeCompare(String(b.nombre||b.email||''),'es'));
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">No hay usuarios registrados.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(u => {
+        const activo = u.activo !== false;
+        const rol = normalizarRolSistema(u.rol);
+        return `<tr class="hover:bg-amber-50">
+          <td class="p-3 font-bold text-gray-800">${escapeHTMLSistema?.(u.nombre || '-') || (u.nombre || '-')}</td>
+          <td class="p-3 text-gray-700">${escapeHTMLSistema?.(u.email || '-') || (u.email || '-')}</td>
+          <td class="p-3"><span class="inline-flex px-2 py-1 rounded-full text-xs font-black bg-red-50 text-red-700 border border-red-100">${rolNombreVisible(rol)}</span></td>
+          <td class="p-3">${activo ? '<span class="text-green-700 font-black">Activo</span>' : '<span class="text-red-700 font-black">Desactivado</span>'}</td>
+          <td class="p-3"><div class="flex flex-wrap gap-2">
+            <button type="button" onclick="cambiarEstadoUsuarioSistema('${u.uid}', ${activo ? 'false' : 'true'})" class="px-3 py-2 rounded-xl text-xs font-black ${activo ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}">${activo ? 'Desactivar' : 'Activar'}</button>
+            <button type="button" onclick="enviarResetUsuarioSistema('${String(u.email || '').replace(/'/g, "\\'")}')" class="px-3 py-2 rounded-xl text-xs font-black bg-amber-100 text-amber-800 hover:bg-amber-200">Reset clave</button>
+          </div></td>
+        </tr>`;
+      }).join('');
+    } catch (e) {
+      console.error('Error cargando usuarios:', e);
+      tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-600">No se pudieron cargar los usuarios. Revisa reglas.</td></tr>';
+    }
+  };
+
+  // Reaplicar permisos cuando todo esté listo y evitar que una función antigua deje la app en login.
+  document.addEventListener('DOMContentLoaded', () => {
+    try { window.aplicarPermisosPorRol(); } catch (_) {}
+  });
+})();
+</script>
+
+</body></html>');
         popupImpresionCocina.document.close();
       } catch (_) {}
     }
@@ -11007,6 +11676,64 @@ async function obtenerFirestoreSistemaUsuarios() {
   return firestoreDb || firebase.firestore();
 }
 
+function normalizarEmailIdSistema(email = '') {
+  return String(email || '').trim().toLowerCase().replace(/\//g, '_');
+}
+
+async function crearRegistroPendienteUsuarioSistema({ nombre = '', email = '', rol = '', origen = 'pendiente_admin' } = {}) {
+  const emailNormalizado = normalizarEmailIdSistema(email);
+  const rolNormalizado = normalizarRolSistema(rol);
+  if (!emailNormalizado || !rolNormalizado) return false;
+  const db = await obtenerFirestoreSistemaUsuarios();
+  await db.collection('usuariosSistemaPendientes').doc(emailNormalizado).set({
+    nombre: nombre || emailNormalizado,
+    email: emailNormalizado,
+    rol: rolNormalizado,
+    activo: true,
+    origen,
+    creadoPor: usuarioActual || '',
+    creadoPorUid: localStorage.getItem('usuarioActualUid') || window.usuarioActualUid || '',
+    actualizadoEn: firebase.firestore.FieldValue.serverTimestamp(),
+    creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  return true;
+}
+
+async function intentarActivarRolPendienteUsuario(user) {
+  if (!user?.email) return null;
+  const emailNormalizado = normalizarEmailIdSistema(user.email);
+  try {
+    const db = await obtenerFirestoreSistemaUsuarios();
+    const pendienteRef = db.collection('usuariosSistemaPendientes').doc(emailNormalizado);
+    const pendienteDoc = await pendienteRef.get();
+    if (!pendienteDoc.exists) return null;
+
+    const data = pendienteDoc.data() || {};
+    const rol = normalizarRolSistema(data.rol);
+    if (!rol || !LP_PERMISOS[rol] || data.activo === false) return null;
+
+    const perfil = {
+      uid: user.uid,
+      nombre: data.nombre || user.displayName || emailNormalizado,
+      email: emailNormalizado,
+      rol,
+      activo: true,
+      origen: data.origen || 'pendiente_admin',
+      creadoPor: data.creadoPor || '',
+      creadoPorUid: data.creadoPorUid || '',
+      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp(),
+      creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    await db.collection('usuariosSistema').doc(user.uid).set(perfil, { merge: true });
+    try { await pendienteRef.delete(); } catch (_) {}
+    return { ...perfil, creadoEn: null, actualizadoEn: null };
+  } catch (error) {
+    console.warn('No se pudo activar el rol pendiente del usuario:', error);
+    return null;
+  }
+}
+
 async function obtenerPerfilUsuarioSistema(user) {
   if (!user) return null;
   const email = String(user.email || '').toLowerCase();
@@ -11017,6 +11744,10 @@ async function obtenerPerfilUsuarioSistema(user) {
     if (doc.exists) perfil = { uid: user.uid, ...doc.data() };
   } catch (error) {
     console.warn('No se pudo leer usuariosSistema:', error);
+  }
+
+  if (!perfil) {
+    perfil = await intentarActivarRolPendienteUsuario(user);
   }
 
   if (!perfil) {
@@ -11063,7 +11794,7 @@ async function iniciarSesion() {
     if (!perfil || !perfil.rol || !LP_PERMISOS[perfil.rol]) {
       try { await firebaseAuth.signOut(); } catch (_) {}
       limpiarSesionLocal();
-      mostrarError('Este usuario existe en Authentication, pero no tiene rol registrado en usuariosSistema. Debe crearlo un administrador.');
+      mostrarError('Este usuario existe en Authentication, pero aún no tiene rol activo. Entra con un administrador y créalo en Usuarios; si ya existe, el sistema dejará el rol pendiente y se activará en el próximo inicio de sesión.');
       return;
     }
     if (!perfil.activo) {
@@ -11075,6 +11806,7 @@ async function iniciarSesion() {
 
     firebaseInicializado = false;
     window.usuarioActualUid = cred.user.uid;
+    window.LP_PERFIL_FIREBASE_ACTUAL = perfil;
     localStorage.setItem('usuarioActualUid', cred.user.uid);
     aplicarSesionAutenticada(perfil.nombre || perfil.email, perfil.rol, perfil.email);
 
@@ -11278,6 +12010,7 @@ function escapeHTMLSistema(valor='') {
 async function crearUsuarioSistemaDesdeAdmin(event) {
   event?.preventDefault?.();
   if (!puedeAccederSistema('usuarios')) return alert('No tienes permiso para crear usuarios.');
+
   const nombre = document.getElementById('nuevoUsuarioNombre')?.value.trim();
   const email = document.getElementById('nuevoUsuarioEmail')?.value.trim().toLowerCase();
   const clave = document.getElementById('nuevoUsuarioClave')?.value || '';
@@ -11293,39 +12026,103 @@ async function crearUsuarioSistemaDesdeAdmin(event) {
     return;
   }
 
-  try {
-    if (btn) { btn.disabled = true; btn.textContent = 'Creando usuario...'; }
-    mostrarMensajeUsuariosAdmin('Creando usuario en Authentication...', 'info');
-    await prepararFirebaseAuthBase();
-    const appName = `lpUserCreator_${Date.now()}_${Math.floor(Math.random()*9999)}`;
-    const secondaryApp = firebase.initializeApp(firebaseConfig, appName);
-    const secondaryAuth = secondaryApp.auth();
-    const cred = await secondaryAuth.createUserWithEmailAndPassword(email, clave);
-    try { await cred.user.updateProfile({ displayName: nombre }); } catch (_) {}
-    try { await secondaryAuth.signOut(); } catch (_) {}
-    try { await secondaryApp.delete(); } catch (_) {}
-
+  const guardarPerfilUsuario = async (uid, origen = 'admin') => {
     const db = await obtenerFirestoreSistemaUsuarios();
-    await db.collection('usuariosSistema').doc(cred.user.uid).set({
-      uid: cred.user.uid,
+    await db.collection('usuariosSistema').doc(uid).set({
+      uid,
       nombre,
       email,
       rol,
       activo: true,
+      origen,
       creadoPor: usuarioActual || '',
       creadoPorUid: localStorage.getItem('usuarioActualUid') || window.usuarioActualUid || '',
-      creadoEn: firebase.firestore.FieldValue.serverTimestamp(),
-      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp(),
+      creadoEn: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
+    try {
+      await db.collection('usuariosSistemaPendientes').doc(normalizarEmailIdSistema(email)).delete();
+    } catch (_) {}
+  };
 
-    document.getElementById('formCrearUsuarioSistema')?.reset();
-    mostrarMensajeUsuariosAdmin(`Usuario creado: ${email} (${rolNombreVisible(rol)})`, 'ok');
-    await cargarUsuariosSistemaAdmin();
+  let secondaryApp = null;
+  let secondaryAuth = null;
+
+  const cerrarAppSecundaria = async () => {
+    try { await secondaryAuth?.signOut?.(); } catch (_) {}
+    try { await secondaryApp?.delete?.(); } catch (_) {}
+    secondaryApp = null;
+    secondaryAuth = null;
+  };
+
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Creando usuario...'; }
+    mostrarMensajeUsuariosAdmin('Creando usuario en Authentication...', 'info');
+
+    await prepararFirebaseAuthBase();
+    const appName = `lpUserCreator_${Date.now()}_${Math.floor(Math.random()*9999)}`;
+    secondaryApp = firebase.initializeApp(firebaseConfig, appName);
+    secondaryAuth = secondaryApp.auth();
+
+    try {
+      const cred = await secondaryAuth.createUserWithEmailAndPassword(email, clave);
+      try { await cred.user.updateProfile({ displayName: nombre }); } catch (_) {}
+      await guardarPerfilUsuario(cred.user.uid, 'creado_desde_admin');
+      await cerrarAppSecundaria();
+
+      document.getElementById('formCrearUsuarioSistema')?.reset();
+      mostrarMensajeUsuariosAdmin(`Usuario creado: ${email} (${rolNombreVisible(rol)})`, 'ok');
+      await cargarUsuariosSistemaAdmin();
+      return;
+    } catch (errorCrearAuth) {
+      const codigo = String(errorCrearAuth?.code || '');
+      if (!codigo.includes('email-already-in-use')) throw errorCrearAuth;
+
+      // Si el correo ya existe en Authentication, intentamos vincularlo al rol.
+      // Esto soluciona los casos en los que el usuario se creó en Auth, pero falló guardar usuariosSistema.
+      mostrarMensajeUsuariosAdmin('Ese correo ya existe en Authentication. Intentando vincularlo al rol seleccionado...', 'info');
+
+      try {
+        const credExistente = await secondaryAuth.signInWithEmailAndPassword(email, clave);
+        await guardarPerfilUsuario(credExistente.user.uid, 'vinculado_auth_existente');
+        await cerrarAppSecundaria();
+
+        document.getElementById('formCrearUsuarioSistema')?.reset();
+        mostrarMensajeUsuariosAdmin(`El correo ya existía. Lo vinculé correctamente como ${rolNombreVisible(rol)}.`, 'ok');
+        await cargarUsuariosSistemaAdmin();
+        return;
+      } catch (errorLoginExistente) {
+        console.warn('El correo existe, pero no se pudo iniciar sesión con la clave escrita:', errorLoginExistente);
+        await cerrarAppSecundaria();
+
+        const uidManual = prompt(
+          'Ese correo ya existe en Firebase Authentication, pero la contraseña escrita no coincide con la cuenta existente.\n\n' +
+          'Para asignarle rol sin crear otra cuenta, abre Firebase Console > Authentication > Users, busca ese correo, copia el UID y pégalo aquí:'
+        );
+
+        if (uidManual && uidManual.trim()) {
+          await guardarPerfilUsuario(uidManual.trim(), 'vinculado_uid_manual');
+          try { await crearRegistroPendienteUsuarioSistema({ nombre, email, rol, origen: 'respaldo_uid_manual' }); } catch (_) {}
+          document.getElementById('formCrearUsuarioSistema')?.reset();
+          mostrarMensajeUsuariosAdmin(`Usuario existente vinculado por UID como ${rolNombreVisible(rol)}.`, 'ok');
+          await cargarUsuariosSistemaAdmin();
+          return;
+        }
+
+        await crearRegistroPendienteUsuarioSistema({ nombre, email, rol, origen: 'pendiente_auth_existente' });
+        document.getElementById('formCrearUsuarioSistema')?.reset();
+        mostrarMensajeUsuariosAdmin(`El correo ya existe en Authentication. Dejé el rol pendiente como ${rolNombreVisible(rol)}; cuando esa persona inicie sesión, se activará automáticamente.`, 'ok');
+        await cargarUsuariosSistemaAdmin();
+        return;
+      }
+    }
   } catch (error) {
     console.error('Error creando usuario:', error);
+    await cerrarAppSecundaria();
     let msg = 'No se pudo crear el usuario.';
-    if (String(error?.code || '').includes('email-already-in-use')) msg = 'Ese correo ya existe en Authentication.';
+    if (String(error?.code || '').includes('email-already-in-use')) msg = 'Ese correo ya existe en Authentication. Debes vincularlo con su UID o usar otro correo.';
     if (String(error?.code || '').includes('weak-password')) msg = 'La contraseña es muy débil. Usa mínimo 6 caracteres.';
+    if (String(error?.code || '').includes('invalid-email')) msg = 'El correo no tiene un formato válido.';
     mostrarMensajeUsuariosAdmin(msg, 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Crear usuario'; }
