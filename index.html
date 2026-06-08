@@ -648,6 +648,15 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
     }
   }
 </style>
+
+<style id="lp-contabilidad-interface-style">
+  body.lp-contador-activo #topNav,
+  body.lp-contador-activo #mobileQuickBar,
+  body.lp-contador-activo #mobileHeaderMenu {
+    display: none !important;
+  }
+</style>
+
 </head>
 <body class="bg-yellow-50 font-sans">
 <div class="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-8 bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50" id="loginScreen">
@@ -820,25 +829,53 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
 </div>
 </div>
 
-<!-- Panel inicial por rol -->
-<main class="p-4 md:p-6 hidden" id="lpRolHome" data-perm-view="rol-home">
-  <section class="max-w-6xl mx-auto">
-    <div class="rounded-[2rem] bg-gradient-to-br from-red-600 via-red-500 to-amber-400 text-white p-6 md:p-8 shadow-xl border border-red-200">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <p class="text-sm uppercase tracking-[0.25em] text-white/80 font-black">La Parepa · Acceso por rol</p>
-          <h2 class="text-3xl md:text-4xl font-black mt-2">Bienvenido, <span id="lpRolHomeUsuario">Usuario</span></h2>
-          <p class="text-white/90 mt-2 text-lg" id="lpRolHomeSubtitulo">Selecciona el módulo autorizado para continuar.</p>
-        </div>
-        <div class="bg-white/20 border border-white/30 rounded-3xl px-5 py-4 backdrop-blur">
-          <p class="text-xs uppercase tracking-wide text-white/75 font-bold">Rol activo</p>
-          <p class="text-2xl font-black" id="lpRolHomeRol">Sin rol</p>
-          <p class="text-sm text-white/80" id="lpRolHomeAcceso">Interfaz cargada según permisos</p>
+<!-- Interfaz exclusiva para rol Contabilidad -->
+<main class="p-4 md:p-8 hidden min-h-[calc(100vh-40px)] bg-gradient-to-br from-red-50 via-amber-50 to-orange-50" data-perm-view="contador-home" id="lpContabilidadHome">
+  <div class="max-w-6xl mx-auto space-y-6">
+    <section class="rounded-[2rem] overflow-hidden shadow-2xl border border-red-100 bg-white">
+      <div class="bg-gradient-to-r from-red-800 via-red-700 to-red-600 text-white p-6 md:p-8">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p class="text-xs md:text-sm uppercase tracking-[0.24em] text-red-100 font-black">Panel de contabilidad</p>
+            <h2 class="text-3xl md:text-5xl font-black mt-2">Hola, <span id="lpContadorHomeUsuario">Usuario</span></h2>
+            <p class="text-red-100 mt-2 text-base md:text-lg">Aquí solo verás los módulos autorizados para contabilidad.</p>
+          </div>
+          <div class="bg-white/15 border border-white/25 rounded-3xl p-4 min-w-[220px]">
+            <p class="text-sm text-red-100">Rol activo</p>
+            <p class="text-2xl font-black" id="lpContadorHomeRol">Contabilidad</p>
+            <button class="mt-4 w-full bg-white text-red-700 rounded-2xl px-4 py-3 font-black hover:bg-red-50" onclick="cerrarSesionRol()" type="button">🔒 Cerrar sesión</button>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-5 mt-6" id="lpRolHomeCards"></div>
-  </section>
+      <div class="p-5 md:p-8 bg-amber-50/70">
+        <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-5">
+          <button class="text-left bg-white rounded-3xl border border-red-100 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition p-5 min-h-[165px]" onclick="window.location.href='finanzas.html'" type="button">
+            <div class="w-14 h-14 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center text-3xl mb-4">📋</div>
+            <h3 class="text-xl font-black text-gray-900">Finanzas</h3>
+            <p class="text-sm text-gray-600 mt-2 leading-5">Ingresos, gastos, movimientos, cierres y reportes financieros.</p>
+          </button>
+          <button class="text-left bg-white rounded-3xl border border-purple-100 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition p-5 min-h-[165px]" onclick="window.location.href='nomina.html'" type="button">
+            <div class="w-14 h-14 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-3xl mb-4">👥</div>
+            <h3 class="text-xl font-black text-gray-900">Nómina</h3>
+            <p class="text-sm text-gray-600 mt-2 leading-5">Consulta y gestión de pagos de empleados y recibos.</p>
+          </button>
+          <button class="text-left bg-white rounded-3xl border border-blue-100 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition p-5 min-h-[165px]" onclick="abrirHistoricos()" type="button">
+            <div class="w-14 h-14 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center text-3xl mb-4">📈</div>
+            <h3 class="text-xl font-black text-gray-900">Históricos</h3>
+            <p class="text-sm text-gray-600 mt-2 leading-5">Ventas registradas, reportes diarios, semanales y mensuales.</p>
+          </button>
+          <button class="text-left bg-white rounded-3xl border border-green-100 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition p-5 min-h-[165px]" onclick="abrirCajaVista()" type="button">
+            <div class="w-14 h-14 rounded-2xl bg-green-100 text-green-700 flex items-center justify-center text-3xl mb-4">💰</div>
+            <h3 class="text-xl font-black text-gray-900">Cierre del día</h3>
+            <p class="text-sm text-gray-600 mt-2 leading-5">Revisión de apertura, cierre, caja esperada y diferencias.</p>
+          </button>
+        </div>
+        <div class="mt-6 rounded-3xl bg-white border border-amber-100 p-5 text-sm text-gray-600">
+          <strong class="text-red-700">Acceso limitado:</strong> este usuario no verá ventas, inventario, menú digital, domicilios ni creación de usuarios en el header. Solo conserva los accesos contables de este panel.
+        </div>
+      </div>
+    </section>
+  </div>
 </main>
 
 <!-- Sección Productos -->
@@ -11218,12 +11255,39 @@ async function iniciarSesion() {
   }
 }
 
+function actualizarMarcoVisiblePorRol() {
+  const contador = esContador();
+  const topNav = document.getElementById('topNav');
+  const quickBar = document.getElementById('mobileQuickBar');
+  const mobileMenu = document.getElementById('mobileHeaderMenu');
+  const avisoPedido = document.getElementById('avisoPedidoCatalogo');
+  document.body.classList.toggle('lp-contador-activo', contador);
+
+  if (topNav) {
+    topNav.classList.toggle('hidden', contador);
+    topNav.style.display = contador ? 'none' : '';
+  }
+  if (quickBar) {
+    quickBar.classList.toggle('hidden', contador);
+    quickBar.style.display = contador ? 'none' : '';
+  }
+  if (mobileMenu && contador) {
+    mobileMenu.classList.add('hidden');
+    mobileMenu.style.display = 'none';
+  } else if (mobileMenu) {
+    mobileMenu.style.display = '';
+  }
+  if (avisoPedido && contador) avisoPedido.classList.add('hidden');
+}
+
 function aplicarPermisosPorRol() {
   const loginScreen = document.getElementById('loginScreen');
   const appContent = document.getElementById('appContent');
   const rolValido = sesionActiva && tieneRolValido();
   if (loginScreen) loginScreen.classList.toggle('hidden', rolValido);
   if (appContent) appContent.classList.toggle('hidden', !rolValido);
+
+  actualizarMarcoVisiblePorRol();
 
   ['rolActualTexto', 'rolActualTextoDesktop'].forEach(id => {
     const el = document.getElementById(id);
@@ -11251,7 +11315,10 @@ function aplicarPermisosPorRol() {
   });
 
   document.querySelectorAll('[data-role="gestion-only"]:not([data-perm])').forEach(el => {
-    const permitido = esSuperAdminSistema();
+    let permitido = esSuperAdminSistema();
+    if (el.hasAttribute('data-perm-view')) {
+      permitido = puedeAccederSistema(el.getAttribute('data-perm-view'));
+    }
     el.classList.toggle('hidden', !permitido);
     el.style.display = permitido ? '' : 'none';
   });
@@ -11264,25 +11331,45 @@ function aplicarPermisosPorRol() {
 
   document.querySelectorAll('[data-perm-view]').forEach(el => {
     const permiso = el.getAttribute('data-perm-view');
+    if (permiso === 'contador-home') return;
     if (!puedeAccederSistema(permiso)) el.classList.add('hidden');
   });
 
   const resumen = document.getElementById('resumenProductos');
   if (resumen && !esSuperAdminSistema()) resumen.classList.add('hidden');
 
-  try { mostrarVentas(); } catch (_) {}
-  try { actualizarIndicadoresPasoVenta(); } catch (_) {}
+  if (!esContador()) {
+    try { mostrarVentas(); } catch (_) {}
+    try { actualizarIndicadoresPasoVenta(); } catch (_) {}
+  }
 }
 
 function ocultarTodasLasVistasSistema() {
-  ['appMain','historicosVista','cajaVista','domiciliosVista','menuDigitalVista','adminUsuariosVista'].forEach(id => {
+  ['lpContabilidadHome','appMain','historicosVista','cajaVista','domiciliosVista','menuDigitalVista','adminUsuariosVista','dashboardPremium','cocinaVistaPremium'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
   });
 }
 
-function abrirVistaInicialSegunRol() {
+function mostrarInterfazContabilidad() {
   ocultarTodasLasVistasSistema();
+  actualizarMarcoVisiblePorRol();
+  const home = document.getElementById('lpContabilidadHome');
+  const usuario = document.getElementById('lpContadorHomeUsuario');
+  const rol = document.getElementById('lpContadorHomeRol');
+  if (usuario) usuario.textContent = usuarioActual || 'Usuario';
+  if (rol) rol.textContent = rolNombreVisible();
+  if (home) home.classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function abrirVistaInicialSegunRol() {
+  aplicarPermisosPorRol();
+  ocultarTodasLasVistasSistema();
+  if (esContador()) {
+    mostrarInterfazContabilidad();
+    return;
+  }
   if (puedeAccederSistema('ventas')) {
     const appMain = document.getElementById('appMain');
     if (appMain) appMain.classList.remove('hidden');
@@ -11315,13 +11402,19 @@ async function cerrarSesionRol() {
   window.usuarioActualUid = '';
   localStorage.removeItem('usuarioActualUid');
   limpiarSesionLocal();
+  try { actualizarMarcoVisiblePorRol(); } catch (_) {}
   if (typeof actualizarEstadoCatalogoSync === 'function') actualizarEstadoCatalogoSync('Catálogo guardado en este dispositivo', 'neutral');
   if (typeof actualizarIndicadorFirebase === 'function') actualizarIndicadorFirebase('local', 'Sesión cerrada. Los datos locales se conservaron.');
 }
 
 function volverAlPOS() {
   cerrarMobileMenu();
+  if (esContador()) {
+    mostrarInterfazContabilidad();
+    return;
+  }
   ocultarTodasLasVistasSistema();
+  actualizarMarcoVisiblePorRol();
   if (puedeAccederSistema('ventas')) {
     const appMain = document.getElementById('appMain');
     if (appMain) appMain.classList.remove('hidden');
@@ -11337,6 +11430,7 @@ function volverAlPOS() {
 function abrirHistoricos() {
   if (!puedeAccederSistema('historicos')) return alert('No tienes permiso para acceder a históricos.');
   ocultarTodasLasVistasSistema();
+  actualizarMarcoVisiblePorRol();
   const historicosVista = document.getElementById('historicosVista');
   if (historicosVista) historicosVista.classList.remove('hidden');
   actualizarHistoricos();
@@ -11346,6 +11440,7 @@ function abrirHistoricos() {
 async function abrirCajaVista() {
   if (!puedeAccederSistema('caja')) return alert('No tienes permiso para acceder al cierre del día.');
   ocultarTodasLasVistasSistema();
+  actualizarMarcoVisiblePorRol();
   const cajaVista = document.getElementById('cajaVista');
   if (cajaVista) cajaVista.classList.remove('hidden');
   await renderControlCajaDiaActual(true);
@@ -11598,262 +11693,5 @@ document.addEventListener('DOMContentLoaded', () => {
   aplicarPermisosPorRol();
 });
 </script>
-
-<script id="lp-interfaces-roles-estable">
-(function(){
-  const LABELS = {
-    admin: 'Administrador',
-    administrador: 'Administrador',
-    cajero: 'Cajero',
-    contador: 'Contabilidad',
-    contabilidad: 'Contabilidad'
-  };
-
-  const PERMISOS_ROL = {
-    admin: { ventas:true, inventario:true, caja:true, finanzas:true, nomina:true, historicos:true, domicilios:true, menu:true, usuarios:true, admin:true },
-    administrador: { ventas:true, inventario:true, caja:true, finanzas:true, nomina:true, historicos:true, domicilios:true, menu:true, usuarios:true, admin:true },
-    cajero: { ventas:true, inventario:true, caja:true, finanzas:false, nomina:false, historicos:false, domicilios:false, menu:false, usuarios:false, admin:false },
-    contador: { ventas:false, inventario:false, caja:true, finanzas:true, nomina:true, historicos:true, domicilios:false, menu:false, usuarios:false, admin:false },
-    contabilidad: { ventas:false, inventario:false, caja:true, finanzas:true, nomina:true, historicos:true, domicilios:false, menu:false, usuarios:false, admin:false }
-  };
-
-  function rolActualSeguro() {
-    try {
-      const raw = typeof rolActual !== 'undefined' ? rolActual : (localStorage.getItem('rolActual') || '');
-      const v = String(raw || '').trim().toLowerCase();
-      if (v === 'administrador') return 'admin';
-      if (v === 'contabilidad') return 'contador';
-      if (v.includes('contab')) return 'contador';
-      if (['admin','cajero','contador'].includes(v)) return v;
-      return v;
-    } catch (_) { return ''; }
-  }
-
-  function usuarioActualSeguro() {
-    try { return (typeof usuarioActual !== 'undefined' && usuarioActual) ? usuarioActual : (localStorage.getItem('usuarioActual') || 'Usuario'); }
-    catch (_) { return 'Usuario'; }
-  }
-
-  function sesionActivaSegura() {
-    try { return Boolean((typeof sesionActiva !== 'undefined' && sesionActiva) || localStorage.getItem('usuarioActual') || localStorage.getItem('rolActual')); }
-    catch (_) { return false; }
-  }
-
-  window.normalizarRolSistema = function normalizarRolSistema(rol='') {
-    const value = String(rol || '').trim().toLowerCase();
-    if (value === 'administrador') return 'admin';
-    if (value === 'contabilidad') return 'contador';
-    if (value.includes('contab')) return 'contador';
-    if (['admin','cajero','contador'].includes(value)) return value;
-    return '';
-  };
-
-  window.rolNombreVisible = function rolNombreVisible(rol = rolActualSeguro()) {
-    const normalizado = window.normalizarRolSistema(rol);
-    return LABELS[normalizado] || 'Sin rol';
-  };
-
-  window.esSuperAdminSistema = function esSuperAdminSistema() { return window.normalizarRolSistema(rolActualSeguro()) === 'admin'; };
-  window.esAdmin = window.esSuperAdminSistema;
-  window.esAdministrador = window.esSuperAdminSistema;
-  window.esCajero = function esCajero(){ return window.normalizarRolSistema(rolActualSeguro()) === 'cajero'; };
-  window.esContador = function esContador(){ return window.normalizarRolSistema(rolActualSeguro()) === 'contador'; };
-  window.tieneAccesoGestion = function tieneAccesoGestion(){ return window.esSuperAdminSistema(); };
-  window.tieneRolValido = function tieneRolValido(){ return Boolean(PERMISOS_ROL[window.normalizarRolSistema(rolActualSeguro())]); };
-  window.puedeAccederSistema = function puedeAccederSistema(permiso) {
-    const rol = window.normalizarRolSistema(rolActualSeguro());
-    return Boolean((PERMISOS_ROL[rol] || {})[permiso]);
-  };
-  window.puedeVerFinanzas = function puedeVerFinanzas(){ return window.puedeAccederSistema('finanzas'); };
-
-  function setVisible(el, visible) {
-    if (!el) return;
-    el.classList.toggle('hidden', !visible);
-    el.style.display = visible ? '' : 'none';
-    if ('disabled' in el) el.disabled = !visible;
-  }
-
-  function vistaIds() {
-    return ['lpRolHome','appMain','historicosVista','cajaVista','domiciliosVista','menuDigitalVista','adminUsuariosVista','dashboardPremium','cocinaVistaPremium'];
-  }
-
-  window.ocultarTodasLasVistasSistema = function ocultarTodasLasVistasSistema() {
-    vistaIds().forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.add('hidden');
-    });
-  };
-
-  window.aplicarPermisosPorRol = function aplicarPermisosPorRol() {
-    const rolValido = sesionActivaSegura() && window.tieneRolValido();
-    setVisible(document.getElementById('loginScreen'), !rolValido);
-    setVisible(document.getElementById('appContent'), rolValido);
-
-    ['rolActualTexto','rolActualTextoDesktop'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = window.rolNombreVisible();
-    });
-    ['usuarioActualTexto','usuarioActualTextoDesktop'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = usuarioActualSeguro();
-    });
-
-    document.querySelectorAll('[data-perm]').forEach(el => {
-      const permiso = el.getAttribute('data-perm');
-      setVisible(el, window.puedeAccederSistema(permiso));
-    });
-
-    document.querySelectorAll('[data-role="admin-only"]').forEach(el => {
-      if (!el.hasAttribute('data-perm')) setVisible(el, window.esSuperAdminSistema());
-    });
-    document.querySelectorAll('[data-role="gestion-only"]').forEach(el => {
-      if (!el.hasAttribute('data-perm')) setVisible(el, window.esSuperAdminSistema());
-    });
-    document.querySelectorAll('[data-role="finanzas-only"]').forEach(el => {
-      if (!el.hasAttribute('data-perm')) setVisible(el, window.puedeAccederSistema('finanzas'));
-    });
-
-    document.querySelectorAll('[data-perm-view]').forEach(el => {
-      const permiso = el.getAttribute('data-perm-view');
-      if (permiso === 'rol-home') return;
-      if (!window.puedeAccederSistema(permiso)) el.classList.add('hidden');
-    });
-
-    const resumen = document.getElementById('resumenProductos');
-    if (resumen && !window.esSuperAdminSistema()) resumen.classList.add('hidden');
-    const loginError = document.getElementById('loginError');
-    if (loginError && rolValido) loginError.classList.add('hidden');
-
-    try { if (typeof mostrarVentas === 'function') mostrarVentas(); } catch (_) {}
-    try { if (typeof actualizarIndicadoresPasoVenta === 'function') actualizarIndicadoresPasoVenta(); } catch (_) {}
-  };
-
-  function cardModulo({titulo, texto, icono, color, accion, permiso}) {
-    if (permiso && !window.puedeAccederSistema(permiso)) return '';
-    return `<button type="button" onclick="${accion}" class="text-left bg-white rounded-3xl border border-red-100 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition p-5 min-h-[150px]">
-      <div class="w-12 h-12 rounded-2xl ${color || 'bg-red-100 text-red-700'} flex items-center justify-center text-2xl mb-4">${icono || '📌'}</div>
-      <h3 class="text-lg font-black text-gray-900">${titulo}</h3>
-      <p class="text-sm text-gray-600 mt-1 leading-5">${texto}</p>
-    </button>`;
-  }
-
-  window.renderizarPanelRolActual = function renderizarPanelRolActual() {
-    const rol = window.normalizarRolSistema(rolActualSeguro());
-    const usuario = document.getElementById('lpRolHomeUsuario');
-    const rolLabel = document.getElementById('lpRolHomeRol');
-    const subtitulo = document.getElementById('lpRolHomeSubtitulo');
-    const cards = document.getElementById('lpRolHomeCards');
-    const acceso = document.getElementById('lpRolHomeAcceso');
-    if (usuario) usuario.textContent = usuarioActualSeguro();
-    if (rolLabel) rolLabel.textContent = window.rolNombreVisible(rol);
-    if (acceso) acceso.textContent = 'Permisos aplicados correctamente';
-
-    let intro = 'Selecciona el módulo autorizado para continuar.';
-    let html = '';
-
-    if (rol === 'admin') {
-      intro = 'Tienes control completo del sistema: ventas, usuarios, inventario, finanzas, nómina e históricos.';
-      html += cardModulo({titulo:'Nueva venta', texto:'Registrar pedidos e imprimir recibos.', icono:'🧾', color:'bg-amber-100 text-amber-800', accion:'volverAlPOS()', permiso:'ventas'});
-      html += cardModulo({titulo:'Cierre de caja', texto:'Abrir caja y cerrar el día.', icono:'💰', color:'bg-green-100 text-green-800', accion:'abrirCajaVista()', permiso:'caja'});
-      html += cardModulo({titulo:'Inventario', texto:'Controlar productos y stock.', icono:'📦', color:'bg-orange-100 text-orange-800', accion:"window.location.href='inventario.html'", permiso:'inventario'});
-      html += cardModulo({titulo:'Finanzas', texto:'Ingresos, gastos y cierres.', icono:'📋', color:'bg-red-100 text-red-800', accion:"window.location.href='finanzas.html'", permiso:'finanzas'});
-      html += cardModulo({titulo:'Nómina', texto:'Empleados, pagos y recibos.', icono:'👥', color:'bg-purple-100 text-purple-800', accion:"window.location.href='nomina.html'", permiso:'nomina'});
-      html += cardModulo({titulo:'Históricos', texto:'Consultar ventas y reportes.', icono:'📈', color:'bg-blue-100 text-blue-800', accion:'abrirHistoricos()', permiso:'historicos'});
-      html += cardModulo({titulo:'Usuarios', texto:'Crear usuarios y asignar roles.', icono:'👤', color:'bg-gray-100 text-gray-800', accion:'abrirUsuariosAdminVista()', permiso:'usuarios'});
-      html += cardModulo({titulo:'Menú digital', texto:'Actualizar catálogo y QR.', icono:'🖼️', color:'bg-pink-100 text-pink-800', accion:'abrirEditorCatalogo()', permiso:'admin'});
-    } else if (rol === 'cajero') {
-      intro = 'Interfaz de cajero: ventas, inventario y cierre de caja. Las demás funciones quedan ocultas.';
-      html += cardModulo({titulo:'Panel de ventas', texto:'Tomar pedidos y enviar cocina.', icono:'🧾', color:'bg-amber-100 text-amber-800', accion:'volverAlPOS()', permiso:'ventas'});
-      html += cardModulo({titulo:'Cierre de caja', texto:'Abrir y cerrar caja del día.', icono:'💰', color:'bg-green-100 text-green-800', accion:'abrirCajaVista()', permiso:'caja'});
-      html += cardModulo({titulo:'Inventario', texto:'Consultar y actualizar stock autorizado.', icono:'📦', color:'bg-orange-100 text-orange-800', accion:"window.location.href='inventario.html'", permiso:'inventario'});
-    } else if (rol === 'contador') {
-      intro = 'Interfaz de contabilidad: finanzas, nómina, históricos y cierre del día.';
-      html += cardModulo({titulo:'Finanzas', texto:'Revisar ingresos, gastos y movimientos.', icono:'📋', color:'bg-red-100 text-red-800', accion:"window.location.href='finanzas.html'", permiso:'finanzas'});
-      html += cardModulo({titulo:'Nómina', texto:'Gestionar pagos y reportes.', icono:'👥', color:'bg-purple-100 text-purple-800', accion:"window.location.href='nomina.html'", permiso:'nomina'});
-      html += cardModulo({titulo:'Históricos', texto:'Consultar ventas y cierres anteriores.', icono:'📈', color:'bg-blue-100 text-blue-800', accion:'abrirHistoricos()', permiso:'historicos'});
-      html += cardModulo({titulo:'Cierre del día', texto:'Revisar control de caja.', icono:'💰', color:'bg-green-100 text-green-800', accion:'abrirCajaVista()', permiso:'caja'});
-    }
-
-    if (subtitulo) subtitulo.textContent = intro;
-    if (cards) cards.innerHTML = html || '<div class="bg-white rounded-3xl p-5 text-red-700 font-bold border border-red-100">Este usuario no tiene módulos asignados.</div>';
-  };
-
-  window.abrirPanelRol = function abrirPanelRol() {
-    if (!window.tieneRolValido()) return;
-    window.ocultarTodasLasVistasSistema();
-    window.renderizarPanelRolActual();
-    const home = document.getElementById('lpRolHome');
-    if (home) home.classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  window.abrirVistaInicialSegunRol = function abrirVistaInicialSegunRol() {
-    window.aplicarPermisosPorRol();
-    const rol = window.normalizarRolSistema(rolActualSeguro());
-    if (rol === 'cajero') {
-      window.ocultarTodasLasVistasSistema();
-      const appMain = document.getElementById('appMain');
-      if (appMain) appMain.classList.remove('hidden');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-    window.abrirPanelRol();
-  };
-
-  window.volverAlPOS = function volverAlPOS() {
-    if (!window.puedeAccederSistema('ventas')) {
-      window.abrirPanelRol();
-      return;
-    }
-    try { if (typeof cerrarMobileMenu === 'function') cerrarMobileMenu(); } catch (_) {}
-    window.ocultarTodasLasVistasSistema();
-    const appMain = document.getElementById('appMain');
-    if (appMain) appMain.classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  window.abrirCajaVista = async function abrirCajaVista() {
-    if (!window.puedeAccederSistema('caja')) return alert('No tienes permiso para acceder al cierre del día.');
-    window.ocultarTodasLasVistasSistema();
-    const cajaVista = document.getElementById('cajaVista');
-    if (cajaVista) cajaVista.classList.remove('hidden');
-    try { if (typeof renderControlCajaDiaActual === 'function') await renderControlCajaDiaActual(true); } catch (_) {}
-    try { if (typeof renderTablaCierresCaja === 'function') await renderTablaCierresCaja(true); } catch (_) {}
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  window.abrirHistoricos = function abrirHistoricos() {
-    if (!window.puedeAccederSistema('historicos')) return alert('No tienes permiso para acceder a históricos.');
-    window.ocultarTodasLasVistasSistema();
-    const v = document.getElementById('historicosVista');
-    if (v) v.classList.remove('hidden');
-    try { if (typeof actualizarHistoricos === 'function') actualizarHistoricos(); } catch (_) {}
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  window.abrirUsuariosAdminVista = function abrirUsuariosAdminVista() {
-    if (!window.puedeAccederSistema('usuarios')) return alert('No tienes permiso para administrar usuarios.');
-    window.ocultarTodasLasVistasSistema();
-    const vista = document.getElementById('adminUsuariosVista');
-    if (vista) vista.classList.remove('hidden');
-    try { if (typeof cargarUsuariosSistemaAdmin === 'function') cargarUsuariosSistemaAdmin(); } catch (_) {}
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  window.abrirEditorCatalogo = function abrirEditorCatalogo() {
-    if (!window.puedeAccederSistema('admin')) return alert('No tienes permiso para editar el menú digital.');
-    window.ocultarTodasLasVistasSistema();
-    try { if (typeof renderizarEditorCatalogo === 'function') renderizarEditorCatalogo(); } catch (_) {}
-    const vista = document.getElementById('menuDigitalVista');
-    if (vista) vista.classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  document.addEventListener('DOMContentLoaded', () => {
-    try { window.aplicarPermisosPorRol(); } catch (e) { console.warn('No se pudieron aplicar permisos iniciales:', e); }
-  });
-})();
-</script>
-
 </body>
 </html>
