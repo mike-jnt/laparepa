@@ -3973,6 +3973,7 @@ function limpiarSesionLocal() {
   localStorage.removeItem("usuarioActual");
   localStorage.removeItem("usuarioEmailActual");
   localStorage.setItem("sesionActiva", "false");
+  window.LP_PERFIL_FIREBASE_ACTUAL = null;
   aplicarPermisosPorRol();
 }
 
@@ -4477,11 +4478,30 @@ async function inicializarFirebaseVentas() {
       return;
     }
 
-    const registroAuth = resolverRegistroUsuario(usuarioFirebase.email || "");
-    if (!registroAuth) {
+    // Antes este punto solo aceptaba los usuarios quemados en el HTML
+    // (admin, administrador y cajero local). Por eso los usuarios creados
+    // desde el panel Admin entraban un segundo y el sistema los devolvía
+    // al login. Ahora se valida primero contra usuariosSistema en Firestore
+    // y, si existe un rol pendiente, se activa automáticamente.
+    let perfilSistema = null;
+    if (typeof obtenerPerfilUsuarioSistema === 'function') {
+      perfilSistema = await obtenerPerfilUsuarioSistema(usuarioFirebase);
+    }
+
+    const registroLocal = resolverRegistroUsuario(usuarioFirebase.email || "");
+    const perfilFinal = perfilSistema || (registroLocal ? {
+      uid: usuarioFirebase.uid,
+      nombre: registroLocal.nombre || registroLocal.usuario || registroLocal.email,
+      email: registroLocal.email || usuarioFirebase.email || "",
+      rol: registroLocal.rol,
+      activo: true,
+      origen: 'local'
+    } : null);
+
+    if (!perfilFinal || !normalizarRolSistema(perfilFinal.rol) || !LP_PERMISOS[normalizarRolSistema(perfilFinal.rol)] || perfilFinal.activo === false) {
       try { await firebaseAuth.signOut(); } catch (_) {}
       limpiarSesionLocal();
-      actualizarIndicadorFirebase("local", "Usuario de Firebase no autorizado en este POS.");
+      actualizarIndicadorFirebase("local", "Usuario de Firebase sin rol activo en usuariosSistema.");
       cargarCatalogoProductos();
       mostrarVentas();
       refrescarVistasAnaliticasSiEstanAbiertas();
@@ -4489,17 +4509,30 @@ async function inicializarFirebaseVentas() {
       return;
     }
 
-    aplicarSesionAutenticada(registroAuth.usuario, registroAuth.rol, registroAuth.email || usuarioFirebase.email || "");
+    aplicarSesionAutenticada(perfilFinal.nombre || perfilFinal.email, normalizarRolSistema(perfilFinal.rol), perfilFinal.email || usuarioFirebase.email || "");
+    window.usuarioActualUid = usuarioFirebase.uid;
+    localStorage.setItem('usuarioActualUid', usuarioFirebase.uid);
+
     authDisponible = true;
     firestoreDisponible = true;
     registrarHeartbeatFirebase();
     cargarCatalogoProductos();
     guardarVentasEnCache(ordenarVentasDesc(obtenerVentasStorage()));
-    escucharVentasFirestore();
+
+    if (puedeAccederSistema('ventas') || puedeAccederSistema('historicos')) {
+      escucharVentasFirestore();
+    }
     escucharCatalogoFirestore();
-    escucharInventarioFirestore();
-    escucharPedidosCatalogoFirestore();
-    programarSyncVentasPendientes(300);
+    if (puedeAccederSistema('inventario')) {
+      escucharInventarioFirestore();
+    } else {
+      inventarioBebidasEstado = obtenerMapaInventarioLocal();
+      actualizarAlertasStockBebidas(inventarioBebidasEstado);
+    }
+    if (puedeAccederSistema('ventas')) {
+      escucharPedidosCatalogoFirestore();
+      programarSyncVentasPendientes(300);
+    }
     iniciarMonitorConexionFirebase();
   } catch (error) {
     console.error("No se pudo iniciar Firebase:", error);
@@ -11137,6 +11170,7 @@ async function iniciarSesion() {
 
     firebaseInicializado = false;
     window.usuarioActualUid = cred.user.uid;
+    window.LP_PERFIL_FIREBASE_ACTUAL = perfil;
     localStorage.setItem('usuarioActualUid', cred.user.uid);
     aplicarSesionAutenticada(perfil.nombre || perfil.email, perfil.rol, perfil.email);
 
