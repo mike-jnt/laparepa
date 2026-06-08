@@ -1047,11 +1047,6 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
           <input type="number" id="costoDomicilio" min="0" step="500" inputmode="numeric" placeholder="Ej: 3000" class="w-full p-3 border border-yellow-300 rounded-xl text-base" />
           <p class="mt-1 text-xs text-gray-500">Este valor lo asume el cliente y no se suma al total de la venta.</p>
         </div>
-        <div class="md:col-span-2">
-          <label for="observaciones" class="block text-sm font-medium text-gray-700 mb-1">Observaciones generales</label>
-          <textarea id="observaciones" rows="2" placeholder="Solo escribe aquí si hay una indicación general para cocina: sin cebolla, poca salsa, entregar con prioridad..." class="w-full p-3 border border-yellow-300 rounded-xl text-base resize-none"></textarea>
-          <p class="mt-1 text-xs text-gray-500">Estas observaciones saldrán debajo de Tipo de pedido. Las notas específicas se escriben en cada producto solo cuando sean necesarias.</p>
-        </div>
       </div>
 
       <div class="md:hidden mt-5 flex flex-col sm:flex-row gap-2 sm:justify-between">
@@ -5250,7 +5245,8 @@ function aplicarPermisosPorRol() {
   document.getElementById("tipoPedido").value = "";
   const costoDomicilioInput = document.getElementById("costoDomicilio");
   if (costoDomicilioInput) costoDomicilioInput.value = "";
-  document.getElementById("observaciones").value = "";
+  const obsPedidoInput = document.getElementById("observaciones");
+  if (obsPedidoInput) obsPedidoInput.value = "";
   limpiarPagoMixtoActual();
   actualizarCampoCostoDomicilio();
   actualizarResumenPagoMixtoUI();
@@ -5338,9 +5334,9 @@ function cancelarPedidoActual() {
     actualizarTotal();
     const infoDescuento = obtenerInfoDescuentoPedidoActual();
     const subtotalProductos = infoDescuento.subtotalNeto;
-    // Las observaciones generales ya no se generan automáticamente desde las notas de productos.
-    // Solo se imprimen si el cajero escribe algo en el campo Observaciones generales.
-    const observaciones = String(document.getElementById("observaciones")?.value || "").trim();
+    // No se usan observaciones generales.
+    // Las indicaciones de cocina se escriben únicamente debajo de cada producto y se imprimen bajo ese producto.
+    const observaciones = "";
     const totalCobrado = redondearPago(subtotalProductos + costoDomicilio);
     const detallePagos = construirDetallePagosVentaDesdeFormulario(formaPago, totalCobrado);
 
@@ -6736,10 +6732,9 @@ function obtenerObservacionesImpresion(venta = {}) {
 }
 
 function construirBloqueObservacionesImpresion(venta = {}) {
-  const observaciones = obtenerObservacionesImpresion(venta);
-  if (!observaciones) return '';
-  const texto = escaparHTMLImpresion(observaciones).replace(/\n/g, '<br>');
-  return `<p class="observaciones-inline"><strong>Observaciones:</strong> ${texto}</p>`;
+  // La observación general fue eliminada del flujo.
+  // En los recibos solo se imprimen las notas manuales escritas debajo de cada producto.
+  return '';
 }
 
 
@@ -7274,7 +7269,8 @@ function editarVenta(index) {
   document.getElementById("tipoPedido").value = venta.tipoPedido;
   const costoDomicilioInput = document.getElementById("costoDomicilio");
   if (costoDomicilioInput) costoDomicilioInput.value = Number(venta.costoDomicilio || 0) > 0 ? Number(venta.costoDomicilio || 0) : "";
-  document.getElementById("observaciones").value = venta.observaciones || "";
+  const obsPedidoInputEditar = document.getElementById("observaciones");
+  if (obsPedidoInputEditar) obsPedidoInputEditar.value = venta.observaciones || "";
 
   actualizarCampoCostoDomicilio();
 
@@ -10987,7 +10983,7 @@ function mostrarModuloIndependiente(nombreModulo) {
 
 <script>
 (function(){
-  // El campo de Observaciones generales debe permanecer visible.
+  // El campo de Notas por producto debe permanecer visible.
   // Antes se ocultaba porque las notas por producto se convertían en observaciones generales.
   // Ahora solo se imprime si el cajero escribe una indicación real para cocina.
 })();
