@@ -2804,6 +2804,10 @@ function escaparHTML(valor = '') {
     .replace(/'/g, '&#39;');
 }
 
+function escaparAttr(valor = '') {
+  return escaparHTML(valor);
+}
+
 
 function normalizarClaveInventario(nombre = "") {
   return String(nombre || "")
