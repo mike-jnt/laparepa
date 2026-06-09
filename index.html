@@ -11904,8 +11904,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!document.getElementById('lpCajeroHeaderGuardar')) {
       actions.insertAdjacentHTML('afterbegin', `
         <button id="lpCajeroHeaderGuardar" type="button" class="lp-cajero-header-btn lp-cajero-header-red" data-lp-cajero-header="true" onclick="guardarVenta()">💾 Guardar venta</button>
-        <button id="lpCajeroHeaderCliente" type="button" class="lp-cajero-header-btn lp-cajero-header-cream" data-lp-cajero-header="true" onclick="imprimirUltimaCliente()">🧾 Recibo cliente</button>
-        <button id="lpCajeroHeaderCocina" type="button" class="lp-cajero-header-btn lp-cajero-header-cream" data-lp-cajero-header="true" onclick="imprimirUltimaCocinero()">👨‍🍳 Recibo cocina</button>
       `);
     }
   }
@@ -11944,30 +11942,62 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-lp-cajero-header="true"]').forEach(el => mostrarElementoLP(el, cajero));
 
     if (cajero) {
-      // Oculta cualquier botón del header o menú móvil que no sea una función permitida del cajero.
-      document.querySelectorAll('#topNav [data-perm]').forEach(el => {
-        const permiso = el.getAttribute('data-perm');
-        const visible = ['ventas','caja','inventario'].includes(permiso) && puedeLP(permiso);
+      // En el header del cajero solo quedan las acciones útiles: guardar, caja, cierre, inventario y cerrar sesión.
+      // Recibo cliente y recibo cocina quedan ocultos SOLO en el header; los botones inferiores se conservan.
+      const textoBoton = (el) => String(el?.textContent || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+      const esBotonOcultoHeaderCajero = (el) => {
+        const texto = textoBoton(el);
+        const permiso = el.getAttribute('data-perm') || '';
+        return permiso === 'finanzas'
+          || permiso === 'nomina'
+          || permiso === 'historicos'
+          || permiso === 'usuarios'
+          || permiso === 'admin'
+          || texto.includes('recibo cliente')
+          || texto.includes('recibo cocina')
+          || texto.includes('imprimir recibo cliente')
+          || texto.includes('imprimir recibo cocina')
+          || texto.includes('finanzas')
+          || texto.includes('nomina')
+          || texto.includes('historicos')
+          || texto.includes('domicilios')
+          || texto.includes('menu digital')
+          || texto.includes('usuarios')
+          || texto.includes('pedidos catalogo')
+          || texto.includes('qr mesas')
+          || texto.includes('exportar')
+          || texto.includes('borrar ventas')
+          || texto.includes('resumen productos')
+          || texto.includes('inicio')
+          || texto === '👨‍🍳 cocina';
+      };
+
+      document.querySelectorAll('#topNav .desktop-header-actions > button, #topNav .desktop-header-actions > a').forEach(el => {
+        const texto = textoBoton(el);
+        const permiso = el.getAttribute('data-perm') || '';
+        let visible = false;
+        if (el.id === 'lpCajeroHeaderGuardar') visible = true;
+        if (permiso === 'caja' && puedeLP('caja')) visible = true;
+        if (permiso === 'inventario' && puedeLP('inventario')) visible = true;
+        if (texto.includes('cerrar sesion')) visible = true;
+        if (esBotonOcultoHeaderCajero(el)) visible = false;
         mostrarElementoLP(el, visible);
       });
-      document.querySelectorAll('#topNav [data-perm="admin"], #topNav [data-perm="finanzas"], #topNav [data-perm="nomina"], #topNav [data-perm="historicos"], #topNav [data-perm="usuarios"]').forEach(el => mostrarElementoLP(el, false));
 
-      // Botones premium o generales sin permiso explícito que no debe ver el cajero.
       ['lpHeaderInicio','lpHeaderCocina','lpMobileInicio'].forEach(id => {
         const el = document.getElementById(id);
         if (el) mostrarElementoLP(el, false);
       });
 
       document.querySelectorAll('#mobileHeaderMenu button').forEach(btn => {
-        const texto = (btn.textContent || '').toLowerCase();
+        const texto = textoBoton(btn);
         const permiso = btn.getAttribute('data-perm') || '';
         let visible = false;
-        if (permiso && ['ventas','caja','inventario'].includes(permiso) && puedeLP(permiso)) visible = true;
-        if (texto.includes('cerrar sesión')) visible = true;
-        if (texto.includes('guardar venta') || texto.includes('imprimir recibo cliente') || texto.includes('imprimir recibo cocina')) visible = true;
-        if (texto.includes('finanzas') || texto.includes('nómina') || texto.includes('nomina') || texto.includes('históricos') || texto.includes('historicos') || texto.includes('domicilios') || texto.includes('menú digital') || texto.includes('menu digital') || texto.includes('usuarios') || texto.includes('qr mesas') || texto.includes('exportar') || texto.includes('borrar ventas') || texto.includes('resumen productos') || texto.includes('pedidos catálogo') || texto.includes('pedidos catalogo') || texto.includes('inicio') || texto.includes('cocina') && btn.id === 'lpMobileInicio') visible = false;
-        // El botón "Recibo cocina" sí queda permitido aunque tenga la palabra cocina.
-        if (texto.includes('imprimir recibo cocina')) visible = true;
+        if (permiso === 'ventas' && texto.includes('guardar') && puedeLP('ventas')) visible = true;
+        if (permiso === 'caja' && puedeLP('caja')) visible = true;
+        if (permiso === 'inventario' && puedeLP('inventario')) visible = true;
+        if (texto.includes('cerrar sesion')) visible = true;
+        if (esBotonOcultoHeaderCajero(btn)) visible = false;
         mostrarElementoLP(btn, visible);
       });
     } else {
