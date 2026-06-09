@@ -11511,5 +11511,470 @@ function mostrarModuloIndependiente(nombreModulo) {
     window.location.href = 'inventario.html';
   };
 </script>
+
+<style id="lp-permisos-visuales-style">
+  .lp-role-hidden {
+    display: none !important;
+  }
+</style>
+
+<script id="lp-permisos-visuales-por-rol">
+(function () {
+  'use strict';
+
+  if (window.__lpPermisosVisualesPorRolInstalados) return;
+  window.__lpPermisosVisualesPorRolInstalados = true;
+
+  function lpNormalizarRolUI(valor) {
+    const rol = String(valor || '').trim().toLowerCase();
+    if (rol === 'administrador') return 'admin';
+    if (rol === 'contador') return 'contabilidad';
+    return rol;
+  }
+
+  function lpRolActualUI() {
+    try {
+      return lpNormalizarRolUI(window.rolActual || localStorage.getItem('rolActual') || '');
+    } catch (_) {
+      return lpNormalizarRolUI(window.rolActual || '');
+    }
+  }
+
+  function lpTieneRolUI(rolesPermitidos) {
+    const rol = lpRolActualUI();
+    return (rolesPermitidos || []).map(lpNormalizarRolUI).includes(rol);
+  }
+
+  function lpTextoPlanoUI(texto) {
+    return String(texto || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  }
+
+  function lpMostrarElementoUI(elemento, visible) {
+    if (!elemento) return;
+    elemento.classList.toggle('lp-role-hidden', !visible);
+    if (!visible) {
+      elemento.setAttribute('aria-hidden', 'true');
+      if ('disabled' in elemento) elemento.disabled = true;
+    } else {
+      elemento.removeAttribute('aria-hidden');
+      if ('disabled' in elemento && !elemento.dataset.lpDisabledOriginal) elemento.disabled = false;
+    }
+  }
+
+  function lpPermisoElementoUI(elemento) {
+    const rol = lpRolActualUI();
+    const firma = [
+      elemento.id || '',
+      elemento.getAttribute('onclick') || '',
+      elemento.getAttribute('href') || '',
+      elemento.dataset.role || '',
+      elemento.textContent || ''
+    ].join(' ');
+    const firmaPlano = lpTextoPlanoUI(firma);
+
+    if (!rol) return true;
+
+    if (elemento.closest('[data-role="admin-only"]') || firmaPlano.includes('admin-only')) {
+      return rol === 'admin';
+    }
+
+    if (elemento.closest('[data-role="gestion-only"]') || firmaPlano.includes('gestion-only')) {
+      return rol === 'admin';
+    }
+
+    if (elemento.closest('[data-role="finanzas-only"]') || firmaPlano.includes('finanzas-only')) {
+      return rol === 'admin' || rol === 'contabilidad';
+    }
+
+    if (elemento.closest('[data-role="contabilidad-only"]') || firmaPlano.includes('contabilidad-only')) {
+      return rol === 'admin' || rol === 'contabilidad';
+    }
+
+    if (/abrirusuariosvista|crearusuariosistemadesdeadmin|eliminarusuariosistemaadmin|cargarusuariosistemaadmin|cambiarestadousuariosistema|enviarresetusuariosistema/.test(firmaPlano)) {
+      return rol === 'admin';
+    }
+
+    if (/abrireditorcatalogo|guardarcatalogodesdeeditor|restablecercatalogobase|sincronizarcatalogodesdeproductosventa/.test(firmaPlano)) {
+      return rol === 'admin';
+    }
+
+    if (/abrirdomiciliosvista|abrirgeneradorqrmesas|generarqrmesas|imprimirqrmesaslaparepa/.test(firmaPlano)) {
+      return rol === 'admin';
+    }
+
+    if (/inventario\.html|abririnventariovista|exportarventase|exportarventas|borrarventas|generarresumenproductos|exportarrespaldolaparepa|importarrespaldolaparepa|imprimirreportediariolaparepa|exportarreportee/.test(firmaPlano)) {
+      return rol === 'admin';
+    }
+
+    if (/editarventa|marcarventacomocancelada|eliminarventapermanentemente|eliminarventasseleccionadas|toggle-seleccion|seleccionadas|borrar cierre|eliminarcierre|manejareliminardesdemodalcierrecaja/.test(firmaPlano)) {
+      return rol === 'admin';
+    }
+
+    if (/cancelarpedidoactual|quitar ultimo agregado|ultimo agregado|↩️/.test(firmaPlano)) {
+      return rol === 'admin';
+    }
+
+    if (/finanzas\.html/.test(firmaPlano)) {
+      return rol === 'admin' || rol === 'contabilidad';
+    }
+
+    if (/nomina\.html|abrirhistoricos|historicos/.test(firmaPlano)) {
+      return rol === 'admin' || rol === 'contabilidad';
+    }
+
+    return true;
+  }
+
+  function lpAplicarPermisosVisualesPorRol() {
+    const rol = lpRolActualUI();
+    document.body.classList.remove('lp-rol-admin', 'lp-rol-cajero', 'lp-rol-contabilidad');
+    if (rol) document.body.classList.add('lp-rol-' + rol);
+
+    document.querySelectorAll('button, a, [data-role]').forEach(function (elemento) {
+      lpMostrarElementoUI(elemento, lpPermisoElementoUI(elemento));
+    });
+
+    const adminIds = [
+      'usuariosVista',
+      'domiciliosVista',
+      'menuDigitalVista',
+      'resumenProductos',
+      'cierresDiariosSeccion',
+      'modalQRMesas'
+    ];
+
+    adminIds.forEach(function (id) {
+      lpMostrarElementoUI(document.getElementById(id), rol === 'admin');
+    });
+
+    const contabilidadIds = ['historicosVista'];
+    contabilidadIds.forEach(function (id) {
+      lpMostrarElementoUI(document.getElementById(id), rol === 'admin' || rol === 'contabilidad');
+    });
+  }
+
+  window.lpAplicarPermisosVisualesPorRol = lpAplicarPermisosVisualesPorRol;
+
+  if (typeof window.aplicarPermisosPorRol === 'function' && !window.aplicarPermisosPorRol.__lpPermisosVisualesWrap) {
+    const originalAplicarPermisosPorRol = window.aplicarPermisosPorRol;
+    window.aplicarPermisosPorRol = function () {
+      const resultado = originalAplicarPermisosPorRol.apply(this, arguments);
+      setTimeout(lpAplicarPermisosVisualesPorRol, 0);
+      return resultado;
+    };
+    window.aplicarPermisosPorRol.__lpPermisosVisualesWrap = true;
+  }
+
+  function lpProtegerFuncionPorRol(nombreFuncion, rolesPermitidos) {
+    const original = window[nombreFuncion];
+    if (typeof original !== 'function' || original.__lpProtegidaPorRol) return;
+    window[nombreFuncion] = function () {
+      if (!lpTieneRolUI(rolesPermitidos)) {
+        alert('No tienes permiso para realizar esta acción.');
+        return false;
+      }
+      return original.apply(this, arguments);
+    };
+    window[nombreFuncion].__lpProtegidaPorRol = true;
+  }
+
+  [
+    'abrirUsuariosVista',
+    'crearUsuarioSistemaDesdeAdmin',
+    'eliminarUsuarioSistemaAdmin',
+    'cargarUsuariosSistemaAdmin',
+    'cambiarEstadoUsuarioSistema',
+    'enviarResetUsuarioSistema',
+    'abrirEditorCatalogo',
+    'guardarCatalogoDesdeEditor',
+    'restablecerCatalogoBase',
+    'sincronizarCatalogoDesdeProductosVenta',
+    'abrirDomiciliosVista',
+    'abrirGeneradorQRMesas',
+    'generarQRMesas',
+    'imprimirQRMesasLaParepa',
+    'abrirInventarioVista',
+    'exportarVentasExcelConEstilo',
+    'exportarVentasAExcel',
+    'borrarVentas',
+    'generarResumenProductos',
+    'editarVenta',
+    'marcarVentaComoCancelada',
+    'eliminarVentaPermanentemente',
+    'eliminarVentasSeleccionadas',
+    'manejarEliminarDesdeModalCierreCaja',
+    'exportarRespaldoLaParepa',
+    'importarRespaldoLaParepa',
+    'imprimirReporteDiarioLaParepa',
+    'exportarReporteExcelLaParepa',
+    'cancelarPedidoActual'
+  ].forEach(function (nombre) {
+    lpProtegerFuncionPorRol(nombre, ['admin']);
+  });
+
+  ['abrirHistoricos'].forEach(function (nombre) {
+    lpProtegerFuncionPorRol(nombre, ['admin', 'contabilidad']);
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    lpAplicarPermisosVisualesPorRol();
+    setTimeout(lpAplicarPermisosVisualesPorRol, 300);
+    setTimeout(lpAplicarPermisosVisualesPorRol, 1200);
+  });
+
+  try {
+    const observer = new MutationObserver(function () {
+      clearTimeout(window.__lpPermisosVisualesTimer);
+      window.__lpPermisosVisualesTimer = setTimeout(lpAplicarPermisosVisualesPorRol, 60);
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  } catch (_) {}
+})();
+</script>
+
+
+
+<style id="lp-header-candados-cajero-style">
+  /* Solo en el header: botones restringidos para cajero visibles con candado. */
+  #topNav .lp-header-locked-cajero {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    opacity: 0.72;
+    filter: grayscale(0.25);
+    cursor: not-allowed !important;
+    user-select: none;
+    position: relative;
+  }
+
+  #topNav .desktop-header-actions .lp-header-locked-cajero {
+    background: rgba(255,255,255,0.72) !important;
+    color: #78350f !important;
+    border: 1px solid rgba(120, 53, 15, 0.18) !important;
+  }
+
+  #topNav #mobileHeaderMenu .lp-header-locked-cajero {
+    display: block !important;
+    width: 100%;
+    color: #92400e !important;
+    opacity: 0.78;
+  }
+
+  #topNav .lp-header-locked-cajero:hover {
+    transform: none !important;
+    box-shadow: inherit !important;
+  }
+</style>
+
+<script id="lp-header-candados-cajero-script">
+(function () {
+  'use strict';
+
+  if (window.__lpHeaderCandadosCajeroInstalado) return;
+  window.__lpHeaderCandadosCajeroInstalado = true;
+
+  function lpNormalizarRolCandado(valor) {
+    const rol = String(valor || '').trim().toLowerCase();
+    if (rol === 'administrador') return 'admin';
+    if (rol === 'contador' || rol === 'contable') return 'contabilidad';
+    return rol;
+  }
+
+  function lpRolCandado() {
+    try {
+      return lpNormalizarRolCandado(window.rolActual || localStorage.getItem('rolActual') || '');
+    } catch (_) {
+      return lpNormalizarRolCandado(window.rolActual || '');
+    }
+  }
+
+  function lpTextoPlanoCandado(texto) {
+    return String(texto || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  }
+
+  function lpFirmaCandado(elemento) {
+    return lpTextoPlanoCandado([
+      elemento.id || '',
+      elemento.getAttribute('onclick') || '',
+      elemento.getAttribute('href') || '',
+      elemento.getAttribute('data-role') || '',
+      elemento.textContent || ''
+    ].join(' '));
+  }
+
+  function lpEsBotonHeaderCandado(elemento) {
+    if (!elemento) return false;
+    if (!elemento.closest('#topNav')) return false;
+    return Boolean(elemento.closest('.desktop-header-actions') || elemento.closest('#mobileHeaderMenu'));
+  }
+
+  function lpEsAccesoBloqueadoHeaderCajero(elemento) {
+    if (!lpEsBotonHeaderCandado(elemento)) return false;
+    const firma = lpFirmaCandado(elemento);
+
+    if (elemento.closest('[data-role="admin-only"], [data-role="gestion-only"], [data-role="finanzas-only"], [data-role="contabilidad-only"]')) {
+      return true;
+    }
+
+    return /finanzas|nomina|historico|historial|domicilio|menu digital|menudigital|usuario|usuarios|inventario|qr mesas|abrirhistoricos|abrirdomiciliosvista|abrireditorcatalogo|abrirusuariosvista|abririnventariovista|abrirgeneradorqrmesas|exportarventas|borrarventas|generarresumenproductos/.test(firma);
+  }
+
+  function lpGuardarOriginalHeader(elemento) {
+    if (!elemento.dataset.lpHeaderOriginalHtml) {
+      elemento.dataset.lpHeaderOriginalHtml = elemento.innerHTML;
+    }
+    if (!elemento.dataset.lpHeaderOriginalOnclick && elemento.getAttribute('onclick')) {
+      elemento.dataset.lpHeaderOriginalOnclick = elemento.getAttribute('onclick');
+    }
+    if (!elemento.dataset.lpHeaderOriginalHref && elemento.getAttribute('href')) {
+      elemento.dataset.lpHeaderOriginalHref = elemento.getAttribute('href');
+    }
+  }
+
+  function lpBloquearHeaderCajero(elemento) {
+    if (!elemento) return;
+    lpGuardarOriginalHeader(elemento);
+
+    elemento.classList.remove('lp-role-hidden', 'hidden');
+    elemento.removeAttribute('aria-hidden');
+    elemento.removeAttribute('disabled');
+    elemento.removeAttribute('onclick');
+    if (elemento.tagName === 'A') elemento.setAttribute('href', 'javascript:void(0)');
+
+    elemento.classList.add('lp-header-locked-cajero');
+    elemento.setAttribute('aria-disabled', 'true');
+    elemento.setAttribute('title', 'Acceso bloqueado para el rol cajero');
+
+    const original = elemento.dataset.lpHeaderOriginalHtml || elemento.innerHTML || '';
+    if (!original.includes('🔒')) {
+      elemento.innerHTML = '🔒 ' + original.trim();
+    }
+  }
+
+  function lpDesbloquearHeader(elemento) {
+    if (!elemento) return;
+    elemento.classList.remove('lp-header-locked-cajero');
+    elemento.removeAttribute('aria-disabled');
+    elemento.removeAttribute('title');
+
+    if (elemento.dataset.lpHeaderOriginalHtml) {
+      elemento.innerHTML = elemento.dataset.lpHeaderOriginalHtml;
+    }
+    if (elemento.dataset.lpHeaderOriginalOnclick) {
+      elemento.setAttribute('onclick', elemento.dataset.lpHeaderOriginalOnclick);
+    }
+    if (elemento.dataset.lpHeaderOriginalHref) {
+      elemento.setAttribute('href', elemento.dataset.lpHeaderOriginalHref);
+    }
+  }
+
+  function lpMostrarPOSPrincipalCajero() {
+    if (lpRolCandado() !== 'cajero') return;
+
+    if (typeof window.volverAlPOS === 'function') {
+      try { window.volverAlPOS(); } catch (_) {}
+    }
+
+    ['appMain', 'ventaPaso1', 'productos', 'categoriaComida', 'categoriaAdiciones', 'categoriaBebidas'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('hidden', 'lp-role-hidden');
+      el.removeAttribute('aria-hidden');
+      el.style.removeProperty('display');
+    });
+  }
+
+  function lpAplicarHeaderCandadosCajero() {
+    const rol = lpRolCandado();
+    const elementosHeader = document.querySelectorAll('#topNav .desktop-header-actions > button, #topNav .desktop-header-actions > a, #mobileHeaderMenu button, #mobileHeaderMenu a');
+
+    elementosHeader.forEach(function (elemento) {
+      if (rol === 'cajero' && lpEsAccesoBloqueadoHeaderCajero(elemento)) {
+        lpBloquearHeaderCajero(elemento);
+      } else {
+        lpDesbloquearHeader(elemento);
+      }
+    });
+
+    if (rol === 'admin') {
+      elementosHeader.forEach(function (elemento) {
+        elemento.classList.remove('lp-role-hidden', 'hidden');
+        elemento.removeAttribute('aria-hidden');
+        elemento.removeAttribute('disabled');
+        elemento.style.removeProperty('display');
+      });
+    }
+
+    if (rol === 'cajero') {
+      lpMostrarPOSPrincipalCajero();
+    }
+  }
+
+  window.lpAplicarHeaderCandadosCajero = lpAplicarHeaderCandadosCajero;
+
+  document.addEventListener('click', function (event) {
+    const bloqueado = event.target.closest && event.target.closest('.lp-header-locked-cajero');
+    if (!bloqueado) return;
+    event.preventDefault();
+    event.stopPropagation();
+    alert('🔒 Este botón está bloqueado para el rol cajero.');
+  }, true);
+
+  if (typeof window.lpAplicarPermisosVisualesPorRol === 'function' && !window.lpAplicarPermisosVisualesPorRol.__lpCandadosHeaderWrap) {
+    const originalPermisos = window.lpAplicarPermisosVisualesPorRol;
+    window.lpAplicarPermisosVisualesPorRol = function () {
+      const resultado = originalPermisos.apply(this, arguments);
+      setTimeout(lpAplicarHeaderCandadosCajero, 30);
+      return resultado;
+    };
+    window.lpAplicarPermisosVisualesPorRol.__lpCandadosHeaderWrap = true;
+  }
+
+  if (typeof window.aplicarPermisosPorRol === 'function' && !window.aplicarPermisosPorRol.__lpCandadosHeaderWrap) {
+    const originalAplicar = window.aplicarPermisosPorRol;
+    window.aplicarPermisosPorRol = function () {
+      const resultado = originalAplicar.apply(this, arguments);
+      setTimeout(lpAplicarHeaderCandadosCajero, 40);
+      return resultado;
+    };
+    window.aplicarPermisosPorRol.__lpCandadosHeaderWrap = true;
+  }
+
+  if (typeof window.iniciarSesion === 'function' && !window.iniciarSesion.__lpCandadosHeaderWrap) {
+    const originalIniciar = window.iniciarSesion;
+    window.iniciarSesion = async function () {
+      const resultado = await originalIniciar.apply(this, arguments);
+      setTimeout(lpAplicarHeaderCandadosCajero, 120);
+      setTimeout(lpAplicarHeaderCandadosCajero, 650);
+      return resultado;
+    };
+    window.iniciarSesion.__lpCandadosHeaderWrap = true;
+  }
+
+  if (typeof window.toggleMobileMenu === 'function' && !window.toggleMobileMenu.__lpCandadosHeaderWrap) {
+    const originalToggleMobile = window.toggleMobileMenu;
+    window.toggleMobileMenu = function () {
+      const resultado = originalToggleMobile.apply(this, arguments);
+      setTimeout(lpAplicarHeaderCandadosCajero, 20);
+      return resultado;
+    };
+    window.toggleMobileMenu.__lpCandadosHeaderWrap = true;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    lpAplicarHeaderCandadosCajero();
+    setTimeout(lpAplicarHeaderCandadosCajero, 300);
+    setTimeout(lpAplicarHeaderCandadosCajero, 1200);
+  });
+})();
+</script>
+
 </body>
 </html>
