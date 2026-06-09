@@ -11736,71 +11736,91 @@ function mostrarModuloIndependiente(nombreModulo) {
 </script>
 
 
-
-<style id="lp-header-candados-cajero-style">
-  /* Solo en el header: botones restringidos para cajero visibles con candado. */
+<style id="lp-admin-desbloqueado-cajero-candados-style">
+  /* Header: botones restringidos del cajero visibles con candado. */
   #topNav .lp-header-locked-cajero {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
     gap: 0.25rem;
-    opacity: 0.72;
+    opacity: 0.76;
     filter: grayscale(0.25);
     cursor: not-allowed !important;
     user-select: none;
-    position: relative;
+    pointer-events: auto !important;
   }
 
   #topNav .desktop-header-actions .lp-header-locked-cajero {
     background: rgba(255,255,255,0.72) !important;
     color: #78350f !important;
-    border: 1px solid rgba(120, 53, 15, 0.18) !important;
+    border: 1px solid rgba(120, 53, 15, 0.22) !important;
   }
 
-  #topNav #mobileHeaderMenu .lp-header-locked-cajero {
+  #mobileHeaderMenu .lp-header-locked-cajero {
     display: block !important;
     width: 100%;
     color: #92400e !important;
-    opacity: 0.78;
+    opacity: 0.82;
   }
 
-  #topNav .lp-header-locked-cajero:hover {
+  #topNav .lp-header-locked-cajero:hover,
+  #mobileHeaderMenu .lp-header-locked-cajero:hover {
     transform: none !important;
     box-shadow: inherit !important;
   }
+
+  /* El cajero siempre conserva visible su POS principal. */
+  body.lp-rol-cajero #appMain,
+  body.lp-rol-cajero #ventaPaso1,
+  body.lp-rol-cajero #productos,
+  body.lp-rol-cajero #categoriaComida,
+  body.lp-rol-cajero #categoriaAdiciones,
+  body.lp-rol-cajero #categoriaBebidas {
+    display: block !important;
+  }
+
+  body.lp-rol-cajero #productos {
+    display: grid !important;
+  }
 </style>
 
-<script id="lp-header-candados-cajero-script">
+<script id="lp-admin-desbloqueado-cajero-candados-script">
 (function () {
   'use strict';
 
-  if (window.__lpHeaderCandadosCajeroInstalado) return;
-  window.__lpHeaderCandadosCajeroInstalado = true;
+  if (window.__lpAdminDesbloqueadoCajeroCandadosV1) return;
+  window.__lpAdminDesbloqueadoCajeroCandadosV1 = true;
 
-  function lpNormalizarRolCandado(valor) {
+  function lpNormalizarRolFinal(valor) {
+    try {
+      if (typeof window.normalizarRolSistema === 'function') {
+        return window.normalizarRolSistema(valor);
+      }
+    } catch (_) {}
+
     const rol = String(valor || '').trim().toLowerCase();
     if (rol === 'administrador') return 'admin';
     if (rol === 'contador' || rol === 'contable') return 'contabilidad';
     return rol;
   }
 
-  function lpRolCandado() {
+  function lpRolActualFinal() {
     try {
-      return lpNormalizarRolCandado(window.rolActual || localStorage.getItem('rolActual') || '');
+      return lpNormalizarRolFinal(window.rolActual || localStorage.getItem('rolActual') || '');
     } catch (_) {
-      return lpNormalizarRolCandado(window.rolActual || '');
+      return lpNormalizarRolFinal(window.rolActual || '');
     }
   }
 
-  function lpTextoPlanoCandado(texto) {
+  function lpTextoPlanoFinal(texto) {
     return String(texto || '')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase();
   }
 
-  function lpFirmaCandado(elemento) {
-    return lpTextoPlanoCandado([
+  function lpFirmaHeaderFinal(elemento) {
+    return lpTextoPlanoFinal([
       elemento.id || '',
       elemento.getAttribute('onclick') || '',
       elemento.getAttribute('href') || '',
@@ -11809,74 +11829,86 @@ function mostrarModuloIndependiente(nombreModulo) {
     ].join(' '));
   }
 
-  function lpEsBotonHeaderCandado(elemento) {
-    if (!elemento) return false;
-    if (!elemento.closest('#topNav')) return false;
-    return Boolean(elemento.closest('.desktop-header-actions') || elemento.closest('#mobileHeaderMenu'));
+  function lpElementosHeaderFinal() {
+    return Array.from(document.querySelectorAll(
+      '#topNav .desktop-header-actions > button, ' +
+      '#topNav .desktop-header-actions > a, ' +
+      '#mobileHeaderMenu button, ' +
+      '#mobileHeaderMenu a'
+    ));
   }
 
-  function lpEsAccesoBloqueadoHeaderCajero(elemento) {
-    if (!lpEsBotonHeaderCandado(elemento)) return false;
-    const firma = lpFirmaCandado(elemento);
+  function lpEsAccesoHeaderRestringidoParaCajero(elemento) {
+    if (!elemento) return false;
+    if (!(elemento.closest('#topNav') || elemento.closest('#mobileHeaderMenu'))) return false;
 
-    if (elemento.closest('[data-role="admin-only"], [data-role="gestion-only"], [data-role="finanzas-only"], [data-role="contabilidad-only"]')) {
-      return true;
-    }
+    const firma = lpFirmaHeaderFinal(elemento);
+    const dataRole = String(elemento.getAttribute('data-role') || '').toLowerCase();
+
+    if (['admin-only', 'gestion-only', 'finanzas-only', 'contabilidad-only'].includes(dataRole)) return true;
+    if (elemento.closest('[data-role="admin-only"], [data-role="gestion-only"], [data-role="finanzas-only"], [data-role="contabilidad-only"]')) return true;
 
     return /finanzas|nomina|historico|historial|domicilio|menu digital|menudigital|usuario|usuarios|inventario|qr mesas|abrirhistoricos|abrirdomiciliosvista|abrireditorcatalogo|abrirusuariosvista|abririnventariovista|abrirgeneradorqrmesas|exportarventas|borrarventas|generarresumenproductos/.test(firma);
   }
 
-  function lpGuardarOriginalHeader(elemento) {
-    if (!elemento.dataset.lpHeaderOriginalHtml) {
-      elemento.dataset.lpHeaderOriginalHtml = elemento.innerHTML;
+  function lpGuardarOriginalHeaderFinal(elemento) {
+    if (!elemento || !elemento.dataset) return;
+    if (!elemento.dataset.lpHeaderOriginalHtmlFinal) {
+      elemento.dataset.lpHeaderOriginalHtmlFinal = elemento.innerHTML;
     }
-    if (!elemento.dataset.lpHeaderOriginalOnclick && elemento.getAttribute('onclick')) {
-      elemento.dataset.lpHeaderOriginalOnclick = elemento.getAttribute('onclick');
+    if (!elemento.dataset.lpHeaderOriginalOnclickFinal && elemento.getAttribute('onclick')) {
+      elemento.dataset.lpHeaderOriginalOnclickFinal = elemento.getAttribute('onclick');
     }
-    if (!elemento.dataset.lpHeaderOriginalHref && elemento.getAttribute('href')) {
-      elemento.dataset.lpHeaderOriginalHref = elemento.getAttribute('href');
+    if (!elemento.dataset.lpHeaderOriginalHrefFinal && elemento.getAttribute('href')) {
+      elemento.dataset.lpHeaderOriginalHrefFinal = elemento.getAttribute('href');
     }
   }
 
-  function lpBloquearHeaderCajero(elemento) {
+  function lpMostrarElementoHeaderFinal(elemento) {
     if (!elemento) return;
-    lpGuardarOriginalHeader(elemento);
-
-    elemento.classList.remove('lp-role-hidden', 'hidden');
+    elemento.classList.remove('hidden', 'lp-role-hidden');
     elemento.removeAttribute('aria-hidden');
-    elemento.removeAttribute('disabled');
-    elemento.removeAttribute('onclick');
-    if (elemento.tagName === 'A') elemento.setAttribute('href', 'javascript:void(0)');
-
-    elemento.classList.add('lp-header-locked-cajero');
-    elemento.setAttribute('aria-disabled', 'true');
-    elemento.setAttribute('title', 'Acceso bloqueado para el rol cajero');
-
-    const original = elemento.dataset.lpHeaderOriginalHtml || elemento.innerHTML || '';
-    if (!original.includes('🔒')) {
-      elemento.innerHTML = '🔒 ' + original.trim();
-    }
+    elemento.style.removeProperty('display');
+    if ('disabled' in elemento) elemento.disabled = false;
   }
 
-  function lpDesbloquearHeader(elemento) {
+  function lpDesbloquearHeaderFinal(elemento) {
     if (!elemento) return;
+    lpMostrarElementoHeaderFinal(elemento);
     elemento.classList.remove('lp-header-locked-cajero');
     elemento.removeAttribute('aria-disabled');
     elemento.removeAttribute('title');
 
-    if (elemento.dataset.lpHeaderOriginalHtml) {
-      elemento.innerHTML = elemento.dataset.lpHeaderOriginalHtml;
+    if (elemento.dataset && elemento.dataset.lpHeaderOriginalHtmlFinal) {
+      elemento.innerHTML = elemento.dataset.lpHeaderOriginalHtmlFinal;
     }
-    if (elemento.dataset.lpHeaderOriginalOnclick) {
-      elemento.setAttribute('onclick', elemento.dataset.lpHeaderOriginalOnclick);
+    if (elemento.dataset && elemento.dataset.lpHeaderOriginalOnclickFinal) {
+      elemento.setAttribute('onclick', elemento.dataset.lpHeaderOriginalOnclickFinal);
     }
-    if (elemento.dataset.lpHeaderOriginalHref) {
-      elemento.setAttribute('href', elemento.dataset.lpHeaderOriginalHref);
+    if (elemento.dataset && elemento.dataset.lpHeaderOriginalHrefFinal) {
+      elemento.setAttribute('href', elemento.dataset.lpHeaderOriginalHrefFinal);
     }
   }
 
-  function lpMostrarPOSPrincipalCajero() {
-    if (lpRolCandado() !== 'cajero') return;
+  function lpBloquearHeaderCajeroFinal(elemento) {
+    if (!elemento) return;
+    lpGuardarOriginalHeaderFinal(elemento);
+    lpMostrarElementoHeaderFinal(elemento);
+
+    elemento.removeAttribute('onclick');
+    if (elemento.tagName === 'A') elemento.setAttribute('href', 'javascript:void(0)');
+    elemento.classList.add('lp-header-locked-cajero');
+    elemento.setAttribute('aria-disabled', 'true');
+    elemento.setAttribute('title', 'Acceso bloqueado para el rol cajero');
+
+    const original = (elemento.dataset && elemento.dataset.lpHeaderOriginalHtmlFinal) ? elemento.dataset.lpHeaderOriginalHtmlFinal : elemento.innerHTML;
+    if (!String(elemento.innerHTML || '').includes('🔒')) {
+      elemento.innerHTML = '🔒 ' + String(original || '').trim();
+    }
+  }
+
+  function lpMostrarPOSPrincipalCajeroFinal() {
+    if (lpRolActualFinal() !== 'cajero') return;
 
     if (typeof window.volverAlPOS === 'function') {
       try { window.volverAlPOS(); } catch (_) {}
@@ -11891,33 +11923,46 @@ function mostrarModuloIndependiente(nombreModulo) {
     });
   }
 
-  function lpAplicarHeaderCandadosCajero() {
-    const rol = lpRolCandado();
-    const elementosHeader = document.querySelectorAll('#topNav .desktop-header-actions > button, #topNav .desktop-header-actions > a, #mobileHeaderMenu button, #mobileHeaderMenu a');
+  function lpDesbloquearAdminCompletoFinal() {
+    // Para admin/administrador: ningún botón del header queda con candado ni oculto.
+    lpElementosHeaderFinal().forEach(lpDesbloquearHeaderFinal);
+
+    // Botones marcados por rol también deben verse para admin.
+    document.querySelectorAll('[data-role="admin-only"], [data-role="gestion-only"], [data-role="finanzas-only"], [data-role="contabilidad-only"]').forEach(function (el) {
+      el.classList.remove('lp-role-hidden');
+      el.removeAttribute('aria-hidden');
+      el.style.removeProperty('display');
+      if ('disabled' in el) el.disabled = false;
+    });
+  }
+
+  function lpAplicarAdminYCajeroFinal() {
+    const rol = lpRolActualFinal();
+
+    document.body.classList.remove('lp-rol-admin', 'lp-rol-cajero', 'lp-rol-contabilidad');
+    if (rol) document.body.classList.add('lp-rol-' + rol);
+
+    const elementosHeader = lpElementosHeaderFinal();
+
+    if (rol === 'admin') {
+      lpDesbloquearAdminCompletoFinal();
+      return;
+    }
 
     elementosHeader.forEach(function (elemento) {
-      if (rol === 'cajero' && lpEsAccesoBloqueadoHeaderCajero(elemento)) {
-        lpBloquearHeaderCajero(elemento);
+      if (rol === 'cajero' && lpEsAccesoHeaderRestringidoParaCajero(elemento)) {
+        lpBloquearHeaderCajeroFinal(elemento);
       } else {
-        lpDesbloquearHeader(elemento);
+        lpDesbloquearHeaderFinal(elemento);
       }
     });
 
-    if (rol === 'admin') {
-      elementosHeader.forEach(function (elemento) {
-        elemento.classList.remove('lp-role-hidden', 'hidden');
-        elemento.removeAttribute('aria-hidden');
-        elemento.removeAttribute('disabled');
-        elemento.style.removeProperty('display');
-      });
-    }
-
     if (rol === 'cajero') {
-      lpMostrarPOSPrincipalCajero();
+      lpMostrarPOSPrincipalCajeroFinal();
     }
   }
 
-  window.lpAplicarHeaderCandadosCajero = lpAplicarHeaderCandadosCajero;
+  window.lpAplicarAdminYCajeroFinal = lpAplicarAdminYCajeroFinal;
 
   document.addEventListener('click', function (event) {
     const bloqueado = event.target.closest && event.target.closest('.lp-header-locked-cajero');
@@ -11927,51 +11972,261 @@ function mostrarModuloIndependiente(nombreModulo) {
     alert('🔒 Este botón está bloqueado para el rol cajero.');
   }, true);
 
-  if (typeof window.lpAplicarPermisosVisualesPorRol === 'function' && !window.lpAplicarPermisosVisualesPorRol.__lpCandadosHeaderWrap) {
-    const originalPermisos = window.lpAplicarPermisosVisualesPorRol;
-    window.lpAplicarPermisosVisualesPorRol = function () {
-      const resultado = originalPermisos.apply(this, arguments);
-      setTimeout(lpAplicarHeaderCandadosCajero, 30);
+  function lpEnvolverFuncionFinal(nombre, delay) {
+    const fn = window[nombre];
+    if (typeof fn !== 'function' || fn.__lpAdminCajeroFinalWrap) return;
+    window[nombre] = function () {
+      const resultado = fn.apply(this, arguments);
+      setTimeout(lpAplicarAdminYCajeroFinal, delay || 40);
+      setTimeout(lpAplicarAdminYCajeroFinal, 250);
       return resultado;
     };
-    window.lpAplicarPermisosVisualesPorRol.__lpCandadosHeaderWrap = true;
+    window[nombre].__lpAdminCajeroFinalWrap = true;
   }
 
-  if (typeof window.aplicarPermisosPorRol === 'function' && !window.aplicarPermisosPorRol.__lpCandadosHeaderWrap) {
-    const originalAplicar = window.aplicarPermisosPorRol;
-    window.aplicarPermisosPorRol = function () {
-      const resultado = originalAplicar.apply(this, arguments);
-      setTimeout(lpAplicarHeaderCandadosCajero, 40);
-      return resultado;
-    };
-    window.aplicarPermisosPorRol.__lpCandadosHeaderWrap = true;
-  }
+  ['aplicarPermisosPorRol', 'lpAplicarPermisosVisualesPorRol', 'toggleMobileMenu', 'cerrarMobileMenu'].forEach(function (nombre) {
+    lpEnvolverFuncionFinal(nombre, 60);
+  });
 
-  if (typeof window.iniciarSesion === 'function' && !window.iniciarSesion.__lpCandadosHeaderWrap) {
-    const originalIniciar = window.iniciarSesion;
+  if (typeof window.iniciarSesion === 'function' && !window.iniciarSesion.__lpAdminCajeroFinalWrap) {
+    const originalIniciarSesion = window.iniciarSesion;
     window.iniciarSesion = async function () {
-      const resultado = await originalIniciar.apply(this, arguments);
-      setTimeout(lpAplicarHeaderCandadosCajero, 120);
-      setTimeout(lpAplicarHeaderCandadosCajero, 650);
+      const resultado = await originalIniciarSesion.apply(this, arguments);
+      setTimeout(lpAplicarAdminYCajeroFinal, 100);
+      setTimeout(lpAplicarAdminYCajeroFinal, 700);
+      setTimeout(lpAplicarAdminYCajeroFinal, 1500);
       return resultado;
     };
-    window.iniciarSesion.__lpCandadosHeaderWrap = true;
-  }
-
-  if (typeof window.toggleMobileMenu === 'function' && !window.toggleMobileMenu.__lpCandadosHeaderWrap) {
-    const originalToggleMobile = window.toggleMobileMenu;
-    window.toggleMobileMenu = function () {
-      const resultado = originalToggleMobile.apply(this, arguments);
-      setTimeout(lpAplicarHeaderCandadosCajero, 20);
-      return resultado;
-    };
-    window.toggleMobileMenu.__lpCandadosHeaderWrap = true;
+    window.iniciarSesion.__lpAdminCajeroFinalWrap = true;
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    lpAplicarHeaderCandadosCajero();
-    setTimeout(lpAplicarHeaderCandadosCajero, 300);
-    setTimeout(lpAplicarHeaderCandadosCajero, 1200);
+    lpAplicarAdminYCajeroFinal();
+    setTimeout(lpAplicarAdminYCajeroFinal, 300);
+    setTimeout(lpAplicarAdminYCajeroFinal, 1200);
+  });
+
+  try {
+    const observer = new MutationObserver(function () {
+      clearTimeout(window.__lpAdminCajeroFinalTimer);
+      window.__lpAdminCajeroFinalTimer = setTimeout(lpAplicarAdminYCajeroFinal, 80);
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'disabled', 'aria-hidden'] });
+  } catch (_) {}
+})();
+</script>
+
+<style id="lp-turno-apertura-caja-style">
+  #modalAperturaCaja[data-turno-nuevo="true"] [data-lp-apertura-cerrar="true"],
+  #modalAperturaCaja[data-turno-nuevo="true"] button[onclick*="cerrarModalCaja"] {
+    display: none !important;
+  }
+</style>
+
+<script id="lp-turno-apertura-caja-admin-cajero">
+(function () {
+  'use strict';
+
+  if (window.__lpTurnoAperturaCajaAdminCajeroInstalado) return;
+  window.__lpTurnoAperturaCajaAdminCajeroInstalado = true;
+
+  function lpRolCajaTurno() {
+    let rol = '';
+    try { rol = window.rolActual || localStorage.getItem('rolActual') || ''; } catch (_) { rol = window.rolActual || ''; }
+    rol = String(rol || '').trim().toLowerCase();
+    if (rol === 'administrador') return 'admin';
+    if (rol === 'contador' || rol === 'contable') return 'contabilidad';
+    return rol;
+  }
+
+  function lpUsuarioPuedeAbrirTurnoCaja() {
+    const rol = lpRolCajaTurno();
+    const sesion = (typeof window.sesionActiva !== 'undefined') ? Boolean(window.sesionActiva) : Boolean(localStorage.getItem('rolActual'));
+    return sesion && (rol === 'admin' || rol === 'cajero');
+  }
+
+  function lpDiaOperativoActualCaja() {
+    if (typeof window.obtenerDiaOperativoCaja === 'function') {
+      return window.obtenerDiaOperativoCaja(new Date());
+    }
+    if (typeof window.obtenerFechaLocalISO === 'function') {
+      return window.obtenerFechaLocalISO(new Date());
+    }
+    const ahora = new Date();
+    const yyyy = ahora.getFullYear();
+    const mm = String(ahora.getMonth() + 1).padStart(2, '0');
+    const dd = String(ahora.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function lpConfigurarModalTurnoCaja(obligatorio) {
+    const modal = document.getElementById('modalAperturaCaja');
+    const titulo = modal?.querySelector('h3');
+    const info = document.getElementById('aperturaCajaInfoModal');
+    const turno = document.getElementById('aperturaCajaTurnoTexto');
+    const input = document.getElementById('aperturaCajaMonto');
+    const diaClave = lpDiaOperativoActualCaja();
+
+    window.LP_APERTURA_CAJA_OBLIGATORIA = Boolean(obligatorio);
+
+    if (modal) {
+      if (obligatorio) {
+        modal.setAttribute('data-obligatorio', 'true');
+        modal.setAttribute('data-turno-nuevo', 'true');
+      } else {
+        modal.removeAttribute('data-obligatorio');
+        modal.removeAttribute('data-turno-nuevo');
+      }
+    }
+
+    if (titulo) titulo.textContent = obligatorio ? 'Apertura de caja - nuevo turno' : 'Apertura de caja';
+    if (info) info.textContent = obligatorio
+      ? `Nuevo turno detectado. Registra con cuánto dinero inicia la caja del día operativo ${diaClave}.`
+      : `Registra con cuánto dinero inicia la caja del día operativo ${diaClave}.`;
+    if (turno) turno.textContent = `Día operativo: ${diaClave}. Esta apertura se solicitará a admin y cajero cuando inicie un turno nuevo.`;
+    if (input && obligatorio) input.value = '';
+    setTimeout(function () { input?.focus(); }, 120);
+  }
+
+  async function lpTurnoCajaYaTieneApertura() {
+    if (typeof window.obtenerControlCajaDia !== 'function') return true;
+    const diaClave = lpDiaOperativoActualCaja();
+    const control = await window.obtenerControlCajaDia(diaClave, true);
+    return Boolean(control && control.aperturaHora);
+  }
+
+  window.lpVerificarAperturaCajaNuevoTurno = async function () {
+    if (!lpUsuarioPuedeAbrirTurnoCaja()) return true;
+
+    const abierta = await lpTurnoCajaYaTieneApertura();
+    if (abierta) {
+      window.LP_APERTURA_CAJA_OBLIGATORIA = false;
+      const modal = document.getElementById('modalAperturaCaja');
+      modal?.removeAttribute('data-obligatorio');
+      modal?.removeAttribute('data-turno-nuevo');
+      return true;
+    }
+
+    lpConfigurarModalTurnoCaja(true);
+    if (typeof window.renderControlCajaDiaActual === 'function') {
+      try { await window.renderControlCajaDiaActual(true); } catch (_) {}
+    }
+    lpConfigurarModalTurnoCaja(true);
+    if (typeof window.abrirModalCaja === 'function') {
+      window.abrirModalCaja('modalAperturaCaja');
+    } else {
+      document.getElementById('modalAperturaCaja')?.classList.remove('hidden');
+    }
+    return false;
+  };
+
+  window.verificarAperturaCajaObligatoria = window.lpVerificarAperturaCajaNuevoTurno;
+
+  window.abrirModalAperturaCajaManual = async function () {
+    if (!lpUsuarioPuedeAbrirTurnoCaja()) {
+      alert('No tienes permiso para registrar apertura de caja.');
+      return;
+    }
+    lpConfigurarModalTurnoCaja(false);
+    if (typeof window.renderControlCajaDiaActual === 'function') {
+      try { await window.renderControlCajaDiaActual(true); } catch (_) {}
+    }
+    lpConfigurarModalTurnoCaja(false);
+    if (typeof window.abrirModalCaja === 'function') window.abrirModalCaja('modalAperturaCaja');
+    else document.getElementById('modalAperturaCaja')?.classList.remove('hidden');
+  };
+
+  window.abrirModalAperturaCaja = window.abrirModalAperturaCajaManual;
+
+  window.registrarAperturaCaja = async function () {
+    if (!lpUsuarioPuedeAbrirTurnoCaja()) {
+      alert('No tienes permiso para registrar apertura de caja.');
+      return;
+    }
+
+    const input = document.getElementById('aperturaCajaMonto');
+    const raw = String(input?.value ?? '').trim();
+    if (raw === '') {
+      alert('Ingresa el monto con el que inicia la caja. Si inicia en cero, escribe 0.');
+      input?.focus();
+      return;
+    }
+
+    const monto = Number(raw);
+    if (!Number.isFinite(monto) || monto < 0) {
+      alert('Ingresa un monto válido para la apertura.');
+      input?.focus();
+      return;
+    }
+
+    const diaClave = lpDiaOperativoActualCaja();
+    const actual = (typeof window.obtenerControlCajaDia === 'function') ? await window.obtenerControlCajaDia(diaClave, true) : {};
+
+    if (typeof window.guardarControlCajaDia === 'function') {
+      await window.guardarControlCajaDia(diaClave, {
+        ...actual,
+        aperturaMonto: monto,
+        aperturaHora: new Date().toISOString(),
+        aperturaUsuario: (typeof window.usuarioActual !== 'undefined' ? (window.usuarioActual || '') : ''),
+        aperturaRol: lpRolCajaTurno(),
+        turnoCorte: '00:30',
+        diaOperativo: diaClave
+      });
+    }
+
+    window.LP_APERTURA_CAJA_OBLIGATORIA = false;
+    const modal = document.getElementById('modalAperturaCaja');
+    modal?.removeAttribute('data-obligatorio');
+    modal?.removeAttribute('data-turno-nuevo');
+
+    alert(`Apertura de caja registrada para el turno ${diaClave}.`);
+    if (typeof window.cerrarModalCaja === 'function') window.cerrarModalCaja('modalAperturaCaja');
+    else modal?.classList.add('hidden');
+
+    if (typeof window.renderControlCajaDiaActual === 'function') await window.renderControlCajaDiaActual(true);
+    if (typeof window.renderTablaCierresCaja === 'function') window.renderTablaCierresCaja(true);
+  };
+
+  if (typeof window.cerrarModalCaja === 'function' && !window.cerrarModalCaja.__lpTurnoCajaWrap) {
+    const originalCerrarModalCaja = window.cerrarModalCaja;
+    window.cerrarModalCaja = function (id) {
+      if (id === 'modalAperturaCaja' && window.LP_APERTURA_CAJA_OBLIGATORIA) {
+        alert('Primero debes registrar la apertura de caja para iniciar el turno.');
+        setTimeout(function () { document.getElementById('aperturaCajaMonto')?.focus(); }, 50);
+        return;
+      }
+      return originalCerrarModalCaja.apply(this, arguments);
+    };
+    window.cerrarModalCaja.__lpTurnoCajaWrap = true;
+  }
+
+  if (typeof window.guardarVenta === 'function' && !window.guardarVenta.__lpTurnoCajaWrap) {
+    const originalGuardarVenta = window.guardarVenta;
+    window.guardarVenta = async function () {
+      const puedeOperar = await window.lpVerificarAperturaCajaNuevoTurno();
+      if (!puedeOperar) return;
+      return originalGuardarVenta.apply(this, arguments);
+    };
+    window.guardarVenta.__lpTurnoCajaWrap = true;
+  }
+
+  if (typeof window.iniciarSesion === 'function' && !window.iniciarSesion.__lpTurnoCajaWrap) {
+    const originalIniciarSesion = window.iniciarSesion;
+    window.iniciarSesion = async function () {
+      const resultado = await originalIniciarSesion.apply(this, arguments);
+      setTimeout(function () { window.lpVerificarAperturaCajaNuevoTurno?.(); }, 350);
+      setTimeout(function () { window.lpVerificarAperturaCajaNuevoTurno?.(); }, 1200);
+      return resultado;
+    };
+    window.iniciarSesion.__lpTurnoCajaWrap = true;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('#modalAperturaCaja button[onclick*="cerrarModalCaja"]').forEach(function (btn) {
+      btn.setAttribute('data-lp-apertura-cerrar', 'true');
+    });
+    setTimeout(function () { window.lpVerificarAperturaCajaNuevoTurno?.(); }, 1000);
+    setTimeout(function () { window.lpVerificarAperturaCajaNuevoTurno?.(); }, 2200);
   });
 })();
 </script>
