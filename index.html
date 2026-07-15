@@ -648,6 +648,15 @@ html[data-cocina="off"] [onclick*="mostrarCocinaPremium"]{
     }
   }
 </style>
+<style id="lp-vistas-independientes-fix">
+  /* Solo una vista principal puede estar visible a la vez. */
+  [data-lp-vista-principal="true"][data-lp-vista-activa="false"] {
+    display: none !important;
+  }
+  [data-lp-vista-principal="true"][data-lp-vista-activa="true"] {
+    display: block;
+  }
+</style>
 </head>
 <body class="bg-yellow-50 font-sans">
 <div class="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-8 bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50" id="loginScreen">
@@ -5015,6 +5024,17 @@ function aplicarPermisosPorRol() {
   }
 
   document.querySelectorAll('[data-role="admin-only"]').forEach(el => {
+    const esVistaIndependiente = ['usuariosVista'].includes(el.id);
+    if (esVistaIndependiente) {
+      if (!esAdmin()) {
+        el.classList.add('hidden');
+        el.style.display = 'none';
+      } else {
+        // Tener permiso no significa abrir la vista. La navegación decide cuándo mostrarla.
+        el.style.removeProperty('display');
+      }
+      return;
+    }
     el.classList.toggle('hidden', !esAdmin());
     el.style.display = esAdmin() ? '' : 'none';
   });
@@ -5040,6 +5060,17 @@ function aplicarPermisosPorRol() {
   });
 
   document.querySelectorAll('[data-role="contabilidad-only"]').forEach(el => {
+    const esVistaIndependiente = ['historicosVista'].includes(el.id);
+    if (esVistaIndependiente) {
+      if (!puedeVerContabilidad()) {
+        el.classList.add('hidden');
+        el.style.display = 'none';
+      } else {
+        // El permiso habilita la vista, pero no debe abrirla automáticamente.
+        el.style.removeProperty('display');
+      }
+      return;
+    }
     el.classList.toggle('hidden', !puedeVerContabilidad());
     el.style.display = puedeVerContabilidad() ? '' : 'none';
   });
@@ -5109,7 +5140,7 @@ function limpiarFormularioUsuarioSistema() {
 }
 
 function ocultarVistasGestionUsuarios() {
-  ["dashboardPremium", "cocinaVistaPremium", "appMain", "historicosVista", "cajaVista", "domiciliosVista", "menuDigitalVista", "usuariosVista", "usuariosVista"].forEach(id => {
+  ["dashboardPremium", "cocinaVistaPremium", "appMain", "historicosVista", "cajaVista", "domiciliosVista", "menuDigitalVista", "usuariosVista"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add("hidden");
   });
@@ -12853,5 +12884,194 @@ function mostrarModuloIndependiente(nombreModulo) {
 })();
 </script>
 
+<script id="lp-navegacion-vistas-independientes">
+(function () {
+  'use strict';
+
+  const VISTAS = [
+    'appMain',
+    'cajaVista',
+    'historicosVista',
+    'domiciliosVista',
+    'menuDigitalVista',
+    'usuariosVista',
+    'dashboardPremium',
+    'cocinaVistaPremium'
+  ];
+
+  const MODULO_POR_VISTA = {
+    appMain: 'pos',
+    cajaVista: 'caja',
+    historicosVista: 'historicos',
+    domiciliosVista: 'domicilios',
+    menuDigitalVista: 'menuDigital',
+    usuariosVista: 'usuarios',
+    dashboardPremium: 'pos',
+    cocinaVistaPremium: 'administracion'
+  };
+
+  let vistaActiva = 'appMain';
+  let cambiandoVista = false;
+
+  function normalizarRolVista(rol) {
+    const valor = String(rol || '').trim().toLowerCase();
+    if (valor === 'administrador') return 'admin';
+    if (valor === 'contador' || valor === 'contable') return 'contabilidad';
+    return valor;
+  }
+
+  function rolActualVista() {
+    try {
+      if (typeof rolActual !== 'undefined' && rolActual) return normalizarRolVista(rolActual);
+    } catch (_) {}
+    try {
+      if (window.rolActual) return normalizarRolVista(window.rolActual);
+    } catch (_) {}
+    try {
+      return normalizarRolVista(localStorage.getItem('rolActual'));
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function puedeAbrirVista(id) {
+    const rol = rolActualVista();
+    if (id === 'usuariosVista' || id === 'menuDigitalVista' || id === 'domiciliosVista') return rol === 'admin';
+    if (id === 'historicosVista') return rol === 'admin' || rol === 'contabilidad';
+    if (id === 'cajaVista') return rol === 'admin' || rol === 'cajero';
+    if (id === 'appMain' || id === 'dashboardPremium') return rol === 'admin' || rol === 'cajero';
+    if (id === 'cocinaVistaPremium') return rol === 'admin';
+    return true;
+  }
+
+  function registrarVistas() {
+    VISTAS.forEach(function (id) {
+      const vista = document.getElementById(id);
+      if (!vista) return;
+      vista.dataset.lpVistaPrincipal = 'true';
+      if (!vista.dataset.lpVistaActiva) vista.dataset.lpVistaActiva = 'false';
+    });
+  }
+
+  function cerrarElementosFlotantes() {
+    try { if (typeof cerrarMobileMenu === 'function') cerrarMobileMenu(); } catch (_) {}
+    document.querySelectorAll('#topNav .lp-nav-group.lp-menu-open').forEach(function (grupo) {
+      grupo.classList.remove('lp-menu-open');
+    });
+  }
+
+  function mostrarVistaPrincipal(id, opciones) {
+    opciones = opciones || {};
+    registrarVistas();
+
+    let destino = id;
+    if (!document.getElementById(destino) || !puedeAbrirVista(destino)) {
+      destino = rolActualVista() === 'contabilidad' ? 'historicosVista' : 'appMain';
+    }
+
+    cambiandoVista = true;
+    VISTAS.forEach(function (vistaId) {
+      const vista = document.getElementById(vistaId);
+      if (!vista) return;
+      const activa = vistaId === destino;
+      vista.dataset.lpVistaActiva = activa ? 'true' : 'false';
+      vista.classList.toggle('hidden', !activa);
+      vista.setAttribute('aria-hidden', activa ? 'false' : 'true');
+      if (activa) {
+        vista.style.removeProperty('display');
+      }
+    });
+    vistaActiva = destino;
+    document.body.dataset.lpVistaActiva = destino;
+    cerrarElementosFlotantes();
+    cambiandoVista = false;
+
+    if (opciones.scroll !== false) {
+      window.scrollTo({ top: 0, behavior: opciones.suave === false ? 'auto' : 'smooth' });
+    }
+    return destino;
+  }
+
+  function restaurarVistaActiva() {
+    if (cambiandoVista) return;
+    mostrarVistaPrincipal(vistaActiva, { scroll: false });
+  }
+
+  function envolverNavegacion(nombre, vistaDestino, antes) {
+    const original = window[nombre];
+    if (typeof original !== 'function' || original.__lpVistaIndependiente) return;
+
+    window[nombre] = async function () {
+      if (typeof antes === 'function') antes.apply(this, arguments);
+      const resultado = original.apply(this, arguments);
+      try {
+        if (resultado && typeof resultado.then === 'function') await resultado;
+      } catch (error) {
+        console.error('Error al abrir ' + vistaDestino + ':', error);
+        throw error;
+      }
+      mostrarVistaPrincipal(vistaDestino);
+      return resultado;
+    };
+    window[nombre].__lpVistaIndependiente = true;
+  }
+
+  function instalarNavegacion() {
+    registrarVistas();
+
+    envolverNavegacion('volverAlPOS', 'appMain');
+    envolverNavegacion('abrirCajaVista', 'cajaVista');
+    envolverNavegacion('abrirHistoricos', 'historicosVista');
+    envolverNavegacion('abrirDomiciliosVista', 'domiciliosVista');
+    envolverNavegacion('abrirEditorCatalogo', 'menuDigitalVista');
+    envolverNavegacion('abrirUsuariosVista', 'usuariosVista');
+    envolverNavegacion('cerrarEditorCatalogo', 'appMain');
+
+    // Pedidos, edición y resumen pertenecen al POS; deben regresar a esa vista antes de desplazarse.
+    ['scrollToPedidosCatalogo', 'scrollToPedido', 'editarVenta', 'cargarPedidoCatalogoEnVenta'].forEach(function (nombre) {
+      const original = window[nombre];
+      if (typeof original !== 'function' || original.__lpVistaIndependiente) return;
+      window[nombre] = function () {
+        mostrarVistaPrincipal('appMain', { scroll: false });
+        return original.apply(this, arguments);
+      };
+      window[nombre].__lpVistaIndependiente = true;
+    });
+
+    // Reaplicar permisos nunca debe cambiar la sección elegida por el usuario.
+    const aplicarOriginal = window.aplicarPermisosPorRol;
+    if (typeof aplicarOriginal === 'function' && !aplicarOriginal.__lpVistaIndependiente) {
+      window.aplicarPermisosPorRol = function () {
+        const resultado = aplicarOriginal.apply(this, arguments);
+        setTimeout(restaurarVistaActiva, 0);
+        return resultado;
+      };
+      window.aplicarPermisosPorRol.__lpVistaIndependiente = true;
+    }
+
+    // Estado inicial por rol.
+    const inicial = rolActualVista() === 'contabilidad' ? 'historicosVista' : 'appMain';
+    mostrarVistaPrincipal(inicial, { scroll: false, suave: false });
+  }
+
+  window.lpMostrarVistaPrincipal = mostrarVistaPrincipal;
+  window.lpVistaPrincipalActiva = function () { return vistaActiva; };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(instalarNavegacion, 0);
+    }, { once: true });
+  } else {
+    instalarNavegacion();
+  }
+
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      instalarNavegacion();
+      restaurarVistaActiva();
+    }, 350);
+  });
+})();
+</script>
 </body>
 </html>
