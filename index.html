@@ -11283,53 +11283,6 @@ function mostrarModuloIndependiente(nombreModulo) {
     };
   }
 
-  async function lpCerrarAperturaCajaSecreta() {
-    const modal = document.getElementById('modalAperturaCaja');
-    const estaVisible = modal && !modal.classList.contains('hidden');
-    if (!estaVisible || !window.LP_APERTURA_CAJA_OBLIGATORIA) return false;
-
-    const diaClave = window.obtenerDiaOperativoCaja(new Date());
-    const actual = typeof obtenerControlCajaDia === 'function' ? await obtenerControlCajaDia(diaClave, true) : {};
-
-    // Atajo interno Ctrl+J: permite desbloquear operación sin escribir monto.
-    // Se registra apertura en $0 para que ventas y cierre de caja sigan funcionando.
-    if (typeof guardarControlCajaDia === 'function') {
-      await guardarControlCajaDia(diaClave, {
-        ...actual,
-        aperturaMonto: 0,
-        aperturaHora: actual?.aperturaHora || new Date().toISOString(),
-        aperturaUsuario: typeof usuarioActual !== 'undefined' ? (usuarioActual || '') : '',
-        turnoCorte: '00:30',
-        diaOperativo: diaClave,
-        aperturaAtajoSecreto: true,
-        aperturaNotaInterna: 'Apertura omitida mediante atajo interno Ctrl+J.'
-      });
-    }
-
-    window.LP_APERTURA_CAJA_OBLIGATORIA = false;
-    modal?.removeAttribute('data-obligatorio');
-    modal?.classList.add('hidden');
-
-    if (typeof renderControlCajaDiaActual === 'function') await renderControlCajaDiaActual(true);
-    const filtro = document.getElementById('filtroHistoricoFecha');
-    if (filtro && filtro.value === diaClave && typeof renderResumenCajaFecha === 'function') await renderResumenCajaFecha(diaClave, true);
-    if (typeof renderTablaCierresCaja === 'function') renderTablaCierresCaja(true);
-    console.info('Apertura de caja omitida con atajo interno Ctrl+J para el día operativo ' + diaClave + '.');
-    return true;
-  }
-
-  window.lpCerrarAperturaCajaSecreta = lpCerrarAperturaCajaSecreta;
-
-  document.addEventListener('keydown', async function(event) {
-    const tecla = String(event.key || '').toLowerCase();
-    if (!event.ctrlKey || tecla !== 'j') return;
-    const modal = document.getElementById('modalAperturaCaja');
-    const estaVisible = modal && !modal.classList.contains('hidden');
-    if (!estaVisible || !window.LP_APERTURA_CAJA_OBLIGATORIA) return;
-    event.preventDefault();
-    event.stopPropagation();
-    await lpCerrarAperturaCajaSecreta();
-  }, true);
 
   if (typeof guardarVenta === 'function') {
     const lpGuardarVentaOriginal = guardarVenta;
@@ -12123,6 +12076,780 @@ function mostrarModuloIndependiente(nombreModulo) {
     });
     observer.observe(header, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'data-module'] });
   });
+})();
+</script>
+
+
+<script id="lp-estabilizacion-integral-v1">
+(function () {
+  'use strict';
+
+  const LP_CAJA_PENDIENTE_KEY = 'lpControlCajaPendienteV1';
+  const LP_INVENTARIO_LOCAL_MOV_KEY = 'lpInventarioMovimientosLocalV1';
+  const LP_MAX_VENTAS_CACHE_PERSISTENTE = 1500;
+  const LP_MAX_VENTAS_FIRESTORE = 3000;
+  const LP_RESERVA_PEDIDO_MS = 10 * 60 * 1000;
+  let lpGuardandoVenta = false;
+  let lpSincronizandoCaja = false;
+
+  function lpTextoPlano(valor, max = 300) {
+    const div = document.createElement('div');
+    div.innerHTML = String(valor ?? '');
+    return String(div.textContent || div.innerText || '')
+      .replace(/[\u0000-\u001F\u007F]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, max);
+  }
+
+  function lpHash(valor = '') {
+    let h = 2166136261;
+    const s = String(valor);
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0).toString(36);
+  }
+
+  function lpLeerJSON(clave, fallback) {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(clave) || 'null');
+      return parsed == null ? fallback : parsed;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function lpEsOnlineFirestore() {
+    return Boolean(firestoreDisponible && firestoreDb && navigator.onLine !== false);
+  }
+
+  function lpFechaISOValida(valor) {
+    const d = valor ? new Date(valor) : new Date();
+    return Number.isNaN(d.getTime()) ? new Date() : d;
+  }
+
+  function lpDiaOperativo(fecha = new Date()) {
+    if (typeof window.obtenerDiaOperativoCaja === 'function') return window.obtenerDiaOperativoCaja(fecha);
+    if (typeof window.obtenerFechaLocalISO === 'function') return window.obtenerFechaLocalISO(fecha);
+    return new Date(fecha).toISOString().slice(0, 10);
+  }
+
+  function lpNormalizarVenta(v = {}, index = null) {
+    const fechaValida = lpFechaISOValida(v.fechaISO || v.fecha);
+    const pedido = (Array.isArray(v.pedido) ? v.pedido : []).slice(0, 300).map(function (p) {
+      return {
+        ...p,
+        nombre: lpTextoPlano(p?.nombre || p?.name || 'Producto', 120),
+        precio: Math.max(0, Number(p?.precio || 0) || 0),
+        nota: lpTextoPlano(p?.nota || p?.observacionProducto || p?.observacion || '', 300),
+        observacionProducto: lpTextoPlano(p?.observacionProducto || p?.nota || p?.observacion || '', 300)
+      };
+    });
+    const bruto = pedido.reduce((a, p) => a + Number(p.precio || 0), 0);
+    const descuentoValor = typeof window.redondearPago === 'function' ? window.redondearPago(Number(v.descuentoValor || 0)) : Number(v.descuentoValor || 0);
+    const subtotalGuardado = Number(v.subtotalProductos ?? v.total ?? NaN);
+    const subtotal = Number.isFinite(subtotalGuardado) && subtotalGuardado >= 0
+      ? subtotalGuardado
+      : Math.max(0, bruto - descuentoValor);
+    const costoDomicilio = Math.max(0, Number(v.costoDomicilio || 0) || 0);
+    const totalCobradoGuardado = Number(v.totalCobrado ?? NaN);
+    const totalCobrado = Number.isFinite(totalCobradoGuardado) && totalCobradoGuardado >= 0
+      ? totalCobradoGuardado
+      : subtotal + costoDomicilio;
+    const numeroFallback = Number.isFinite(Number(index)) ? Number(index) + 1 : (Number(v.comanda ?? v.recibo ?? 0) || 1);
+    const estado = typeof window.obtenerEstadoVenta === 'function'
+      ? window.obtenerEstadoVenta(v)
+      : (String(v.estado || 'activa').toLowerCase() === 'cancelada' ? 'cancelada' : 'activa');
+    const formaPago = lpTextoPlano(v.formaPago || '', 40);
+    let detallePagos = [];
+    if (typeof window.normalizarDetallePagos === 'function') {
+      detallePagos = window.normalizarDetallePagos(v.detallePagos || v.pagos || [], totalCobrado);
+      if (!detallePagos.length && typeof window.crearDetallePagoSimple === 'function') {
+        detallePagos = window.crearDetallePagoSimple(formaPago, totalCobrado);
+      }
+    }
+    return {
+      ...v,
+      cliente: lpTextoPlano(v.cliente || 'Cliente', 120),
+      usuario: lpTextoPlano(v.usuario || '', 120),
+      rolUsuario: lpTextoPlano(v.rolUsuario || '', 40),
+      observaciones: lpTextoPlano(v.observaciones || '', 500),
+      tipoPedido: lpTextoPlano(v.tipoPedido || '', 40),
+      formaPago,
+      pedido,
+      estado,
+      fechaISO: v.fechaISO || fechaValida.toISOString(),
+      fecha: v.fecha || (typeof window.formatearFechaHoraColombia === 'function' ? window.formatearFechaHoraColombia(fechaValida) : fechaValida.toLocaleString()),
+      diaClave: v.diaClave || lpDiaOperativo(fechaValida),
+      comanda: v.comanda ?? v.recibo ?? numeroFallback,
+      recibo: v.recibo ?? v.comanda ?? numeroFallback,
+      subtotalProductos: Number(subtotal.toFixed(2)),
+      subtotalAntesDescuento: Number((Number(v.subtotalAntesDescuento || 0) || bruto || (subtotal + descuentoValor)).toFixed(2)),
+      descuentoPorcentaje: descuentoValor > 0 ? (Number(v.descuentoPorcentaje || 0) || 20) : 0,
+      descuentoValor: Number(descuentoValor.toFixed(2)),
+      descuentoNombre: descuentoValor > 0 ? lpTextoPlano(v.descuentoNombre || 'Descuento 20%', 80) : '',
+      costoDomicilio: Number(costoDomicilio.toFixed(2)),
+      numeroDomicilio: Number(v.numeroDomicilio || 0) > 0 ? Number(v.numeroDomicilio) : null,
+      totalCobrado: Number(totalCobrado.toFixed(2)),
+      detallePagos,
+      total: Number(subtotal.toFixed(2)),
+      pedidoCatalogoId: lpTextoPlano(v.pedidoCatalogoId || '', 160) || null,
+      _docId: lpTextoPlano(v._docId || '', 180) || null,
+      _localId: lpTextoPlano(v._localId || v._docId || '', 180) || null,
+      _syncEstado: v._syncEstado === 'pendiente' ? 'pendiente' : 'sincronizado'
+    };
+  }
+
+  window.normalizarVenta = lpNormalizarVenta;
+  try { normalizarVenta = lpNormalizarVenta; } catch (_) {}
+
+  window.guardarVentasEnCache = function (ventas) {
+    const lista = (Array.isArray(ventas) ? ventas : []).map(lpNormalizarVenta);
+    ventasCache = lista;
+    try {
+      localStorage.setItem('ventas', JSON.stringify(lista));
+    } catch (error) {
+      console.warn('La caché completa de ventas superó la capacidad del navegador. Se conservarán las más recientes en almacenamiento persistente.', error);
+      try { localStorage.setItem('ventas', JSON.stringify(lista.slice(0, LP_MAX_VENTAS_CACHE_PERSISTENTE))); } catch (_) {}
+    }
+    return lista;
+  };
+  try { guardarVentasEnCache = window.guardarVentasEnCache; } catch (_) {}
+
+  window.obtenerVentasStorage = function () {
+    return (Array.isArray(ventasCache) ? ventasCache : []).map(lpNormalizarVenta);
+  };
+  try { obtenerVentasStorage = window.obtenerVentasStorage; } catch (_) {}
+
+  function lpVentaRevisionInventario(venta = {}) {
+    const items = (Array.isArray(venta.pedido) ? venta.pedido : []).map(p => [lpTextoPlano(p.nombre, 120), Number(p.precio || 0)]);
+    return lpHash(JSON.stringify({ estado: String(venta.estado || 'activa'), items }));
+  }
+
+  function lpAplicarInventarioLocalUnaVez(ventaNueva, ventaAnterior) {
+    const nueva = ventaNueva ? lpNormalizarVenta(ventaNueva) : null;
+    const anterior = ventaAnterior ? lpNormalizarVenta(ventaAnterior) : null;
+    const localId = nueva?._localId || anterior?._localId || nueva?._docId || anterior?._docId || '';
+    const revision = lpHash(`${localId}|${lpVentaRevisionInventario(anterior || {})}|${lpVentaRevisionInventario(nueva || {})}`);
+    const ledger = lpLeerJSON(LP_INVENTARIO_LOCAL_MOV_KEY, []);
+    if (Array.isArray(ledger) && ledger.includes(revision)) return;
+    const pedidoAnterior = anterior && !(typeof window.esVentaCancelada === 'function' && window.esVentaCancelada(anterior)) ? anterior.pedido : [];
+    const pedidoNuevo = nueva && !(typeof window.esVentaCancelada === 'function' && window.esVentaCancelada(nueva)) ? nueva.pedido : [];
+    const ajustes = typeof window.calcularAjustesInventarioBebidas === 'function'
+      ? window.calcularAjustesInventarioBebidas(pedidoAnterior || [], pedidoNuevo || [])
+      : {};
+    if (typeof window.aplicarAjustesInventarioLocal === 'function') window.aplicarAjustesInventarioLocal(ajustes);
+    const nuevoLedger = [...(Array.isArray(ledger) ? ledger : []), revision].slice(-800);
+    try { localStorage.setItem(LP_INVENTARIO_LOCAL_MOV_KEY, JSON.stringify(nuevoLedger)); } catch (_) {}
+  }
+
+  function lpDocIdVenta(venta, docId = null) {
+    return String(docId || venta?._docId || venta?._localId || (typeof window.generarIdVentaLocal === 'function' ? window.generarIdVentaLocal() : `venta_${Date.now()}`))
+      .replace(/[\/#?\[\]]/g, '_')
+      .slice(0, 180);
+  }
+
+  async function lpMapaInventarioFirestore() {
+    const mapa = new Map();
+    const snap = await firestoreDb.collection((typeof INVENTARIO_COLLECTION !== 'undefined' ? INVENTARIO_COLLECTION : 'inventario')).get();
+    snap.docs.forEach(doc => {
+      const data = doc.data() || {};
+      const clave = typeof window.normalizarClaveInventario === 'function'
+        ? window.normalizarClaveInventario(data.nombreNormalizado || data.nombre || '')
+        : String(data.nombreNormalizado || data.nombre || '').toLowerCase();
+      if (clave) mapa.set(clave, doc.ref);
+    });
+    return mapa;
+  }
+
+  async function lpGuardarVentaTransaccional(venta, docId = null) {
+    if (!lpEsOnlineFirestore()) throw new Error('Firestore no está disponible.');
+    const normalizada = lpNormalizarVenta(venta);
+    normalizada._localId = normalizada._localId || lpDocIdVenta(normalizada, docId);
+    const id = lpDocIdVenta(normalizada, docId);
+    const ventaRef = firestoreDb.collection('ventas').doc(id);
+    const mapaInventario = await lpMapaInventarioFirestore();
+
+    await firestoreDb.runTransaction(async function (tx) {
+      const ventaSnap = await tx.get(ventaRef);
+      const anterior = ventaSnap.exists ? lpNormalizarVenta({ _docId: ventaSnap.id, ...ventaSnap.data() }) : null;
+      const pedidoAnterior = anterior && !(typeof window.esVentaCancelada === 'function' && window.esVentaCancelada(anterior)) ? anterior.pedido : [];
+      const pedidoNuevo = !(typeof window.esVentaCancelada === 'function' && window.esVentaCancelada(normalizada)) ? normalizada.pedido : [];
+      const ajustes = typeof window.calcularAjustesInventarioBebidas === 'function'
+        ? window.calcularAjustesInventarioBebidas(pedidoAnterior || [], pedidoNuevo || [])
+        : {};
+
+      const inventarioLecturas = [];
+      for (const [clave, ajuste] of Object.entries(ajustes || {})) {
+        const ref = mapaInventario.get(clave);
+        if (!ref) {
+          console.warn('No existe un registro de inventario para:', ajuste?.nombre || clave);
+          continue;
+        }
+        inventarioLecturas.push({ clave, ajuste, ref, snap: await tx.get(ref) });
+      }
+      for (const lectura of inventarioLecturas) {
+        const actual = Number(lectura.snap.data()?.cantidad || 0);
+        tx.update(lectura.ref, {
+          cantidad: Math.max(0, actual + Number(lectura.ajuste?.cantidad || 0)),
+          fecha: typeof window.obtenerFechaLocalISO === 'function' ? window.obtenerFechaLocalISO(new Date()) : new Date().toISOString().slice(0, 10),
+          actualizadoEn: window.firebase?.firestore?.FieldValue?.serverTimestamp ? window.firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString()
+        });
+      }
+
+      const limpia = { ...normalizada };
+      delete limpia._docId;
+      delete limpia._syncEstado;
+      limpia._localId = normalizada._localId;
+      limpia._revisionInventario = lpVentaRevisionInventario(normalizada);
+      limpia.actualizadoEn = window.firebase?.firestore?.FieldValue?.serverTimestamp ? window.firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString();
+      tx.set(ventaRef, limpia, { merge: true });
+    });
+
+    if (typeof window.registrarHeartbeatFirebase === 'function') window.registrarHeartbeatFirebase();
+    return id;
+  }
+
+  window.guardarVentaEnFirebase = lpGuardarVentaTransaccional;
+  try { guardarVentaEnFirebase = lpGuardarVentaTransaccional; } catch (_) {}
+
+  async function lpPersistirVenta(ventaNueva, ventaAnterior = null) {
+    const nueva = lpNormalizarVenta(ventaNueva);
+    nueva._localId = nueva._localId || ventaAnterior?._localId || lpDocIdVenta(nueva);
+    nueva._syncEstado = 'pendiente';
+
+    lpAplicarInventarioLocalUnaVez(nueva, ventaAnterior);
+    if (typeof window.upsertVentaEnCacheLocal === 'function') window.upsertVentaEnCacheLocal(nueva);
+    if (typeof window.guardarVentaPendienteSync === 'function') window.guardarVentaPendienteSync(nueva, {});
+
+    if (!lpEsOnlineFirestore()) return { venta: nueva, sincronizada: false };
+
+    try {
+      const docId = await lpGuardarVentaTransaccional(nueva, nueva._docId || null);
+      const sincronizada = { ...nueva, _docId: docId, _syncEstado: 'sincronizado' };
+      if (typeof window.upsertVentaEnCacheLocal === 'function') window.upsertVentaEnCacheLocal(sincronizada);
+      if (typeof window.quitarVentaPendienteSync === 'function') window.quitarVentaPendienteSync(nueva._localId || docId);
+      return { venta: sincronizada, sincronizada: true };
+    } catch (error) {
+      console.error('La venta quedó guardada localmente y pendiente de sincronización:', error);
+      return { venta: nueva, sincronizada: false, error };
+    }
+  }
+
+  window.sincronizarVentasPendientesEnSegundoPlano = async function () {
+    if (sincronizandoVentasPendientes || !lpEsOnlineFirestore()) return;
+    const pendientes = typeof window.obtenerVentasPendientesSync === 'function' ? window.obtenerVentasPendientesSync() : [];
+    if (!pendientes.length) return;
+    sincronizandoVentasPendientes = true;
+    try {
+      for (const item of pendientes) {
+        const venta = lpNormalizarVenta(item?.venta || {});
+        const clave = venta._localId || venta._docId;
+        try {
+          const docId = await lpGuardarVentaTransaccional(venta, venta._docId || null);
+          const sincronizada = { ...venta, _docId: docId, _syncEstado: 'sincronizado' };
+          window.upsertVentaEnCacheLocal?.(sincronizada);
+          window.quitarVentaPendienteSync?.(clave);
+          window.guardarReferenciaUltimaVenta?.(sincronizada);
+          if (sincronizada.pedidoCatalogoId) {
+            try { await window.marcarPedidoCatalogoEstado?.(sincronizada.pedidoCatalogoId, 'procesado', false); } catch (_) {}
+          }
+        } catch (error) {
+          console.error('No se pudo sincronizar la venta pendiente:', error);
+          break;
+        }
+      }
+    } finally {
+      sincronizandoVentasPendientes = false;
+    }
+  };
+  try { sincronizarVentasPendientesEnSegundoPlano = window.sincronizarVentasPendientesEnSegundoPlano; } catch (_) {}
+
+  window.escucharVentasFirestore = function () {
+    if (!lpEsOnlineFirestore()) return;
+    if (typeof ventasUnsubscribe === 'function') ventasUnsubscribe();
+
+    const localesAntes = (() => {
+      try { return JSON.parse(localStorage.getItem('ventas') || '[]').map(lpNormalizarVenta); } catch (_) { return []; }
+    })();
+    const pendientesIniciales = typeof window.obtenerVentasPendientesSync === 'function' ? window.obtenerVentasPendientesSync() : [];
+    const clavesPendientes = new Set(pendientesIniciales.map(x => x?.venta?._localId || x?.venta?._docId).filter(Boolean));
+    localesAntes.filter(v => !v._docId && !clavesPendientes.has(v._localId || '')).forEach(v => {
+      v._localId = v._localId || lpDocIdVenta(v);
+      v._syncEstado = 'pendiente';
+      window.guardarVentaPendienteSync?.(v, {});
+    });
+
+    ventasUnsubscribe = firestoreDb.collection('ventas')
+      .orderBy('fechaISO', 'desc')
+      .limit(LP_MAX_VENTAS_FIRESTORE)
+      .onSnapshot(function (snapshot) {
+        window.registrarHeartbeatFirebase?.();
+        const remotas = snapshot.docs.map(doc => lpNormalizarVenta({ _docId: doc.id, ...doc.data() }));
+        const pendientes = (window.obtenerVentasPendientesSync?.() || []).map(x => lpNormalizarVenta(x.venta));
+        const mapa = new Map();
+        [...remotas, ...pendientes].forEach(v => mapa.set(v._localId || v._docId, v));
+        window.guardarVentasEnCache?.(window.ordenarVentasDesc ? window.ordenarVentasDesc([...mapa.values()]) : [...mapa.values()]);
+        window.programarSyncVentasPendientes?.(80);
+        window.mostrarVentas?.();
+        window.refrescarVistasAnaliticasSiEstanAbiertas?.();
+      }, function (error) {
+        console.error('Error al escuchar ventas de Firebase:', error);
+        window.actualizarIndicadorFirebase?.('desconectado', 'Sincronización pendiente. Las ventas continúan guardándose localmente.');
+      });
+  };
+  try { escucharVentasFirestore = window.escucharVentasFirestore; } catch (_) {}
+
+  window.escucharCatalogoFirestore = function () {
+    if (!lpEsOnlineFirestore()) {
+      window.actualizarEstadoCatalogoSync?.('Catálogo en modo local.', 'warn');
+      return;
+    }
+    if (typeof catalogoUnsubscribe === 'function') catalogoUnsubscribe();
+    const ref = window.obtenerRefCatalogoFirestore?.();
+    if (!ref) return;
+    catalogoUnsubscribe = ref.onSnapshot(async function (doc) {
+      window.registrarHeartbeatFirebase?.();
+      catalogoFirestorePermisosDisponibles = true;
+      const aplicado = window.aplicarCatalogoRemoto?.(doc.exists ? doc.data() : null, 'firebase');
+      if (!aplicado) await window.sembrarCatalogoRemotoSiNoExiste?.();
+    }, function (error) {
+      console.error('Error al escuchar el catálogo:', error);
+      window.actualizarEstadoCatalogoSync?.('Catálogo en modo local.', 'warn');
+    });
+  };
+  try { escucharCatalogoFirestore = window.escucharCatalogoFirestore; } catch (_) {}
+
+  async function lpSiguienteNumeracion(diaClave) {
+    const key = `numeracionDia_${diaClave}`;
+    const local = lpLeerJSON(key, { comanda: 0, recibo: 0 });
+    const maxCache = (window.obtenerVentasStorage?.() || [])
+      .filter(v => v.diaClave === diaClave)
+      .reduce((m, v) => Math.max(m, Number(v.comanda || v.recibo || 0)), 0);
+    if (lpEsOnlineFirestore()) {
+      try {
+        const ref = firestoreDb.collection('controlCaja').doc(diaClave);
+        let siguiente = 0;
+        await firestoreDb.runTransaction(async function (tx) {
+          const snap = await tx.get(ref);
+          const remoto = Number(snap.data()?.ultimaComanda || 0);
+          siguiente = Math.max(remoto, Number(local.comanda || 0), maxCache) + 1;
+          tx.set(ref, {
+            diaClave,
+            ultimaComanda: siguiente,
+            numeracionActualizadaEn: window.firebase?.firestore?.FieldValue?.serverTimestamp ? window.firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString()
+          }, { merge: true });
+        });
+        const salida = { comanda: siguiente, recibo: siguiente };
+        localStorage.setItem(key, JSON.stringify(salida));
+        return salida;
+      } catch (error) {
+        console.warn('No se pudo reservar numeración en Firebase. Se usará numeración local provisional.', error);
+      }
+    }
+    const siguiente = Math.max(Number(local.comanda || 0), maxCache) + 1;
+    const salida = { comanda: siguiente, recibo: siguiente };
+    localStorage.setItem(key, JSON.stringify(salida));
+    return salida;
+  }
+
+  function lpBloquearBotonesGuardar(bloquear) {
+    document.querySelectorAll('[onclick*="guardarVenta"]').forEach(btn => {
+      if (bloquear) {
+        btn.dataset.lpDisabledAntes = btn.disabled ? '1' : '0';
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+      } else {
+        btn.disabled = btn.dataset.lpDisabledAntes === '1';
+        btn.removeAttribute('aria-busy');
+      }
+    });
+  }
+
+  window.guardarVenta = async function () {
+    if (lpGuardandoVenta) return;
+    if (!window.verificarAcceso?.(['admin', 'cajero'])) return;
+    if (typeof window.verificarAperturaCajaObligatoria === 'function') {
+      const puede = await window.verificarAperturaCajaObligatoria();
+      if (!puede) return;
+    }
+
+    const cliente = lpTextoPlano(document.getElementById('cliente')?.value || '', 120);
+    const formaPago = document.getElementById('formaPago')?.value || '';
+    const tipoPedido = document.getElementById('tipoPedido')?.value || '';
+    if (!Array.isArray(pedido) || !pedido.length) return alert('Agrega productos al pedido.');
+    if (!cliente) return alert('Por favor ingresa el nombre del cliente.');
+    if (!formaPago) return alert('Por favor selecciona una forma de pago.');
+    if (!tipoPedido) return alert('Por favor selecciona un tipo de pedido.');
+
+    const costoTexto = String(document.getElementById('costoDomicilio')?.value || '').trim();
+    if (tipoPedido === 'Domicilio' && costoTexto === '') return alert('Por favor ingresa el valor del domicilio.');
+    const costoDomicilio = tipoPedido === 'Domicilio' ? Number(costoTexto || 0) : 0;
+    if (!Number.isFinite(costoDomicilio) || costoDomicilio < 0) return alert('Ingresa un valor válido para el domicilio.');
+
+    window.actualizarTotal?.();
+    const info = window.obtenerInfoDescuentoPedidoActual?.() || { subtotalNeto: Number(total || 0), subtotalBruto: Number(total || 0), porcentaje: 0, valor: 0 };
+    const totalCobrado = window.redondearPago ? window.redondearPago(info.subtotalNeto + costoDomicilio) : info.subtotalNeto + costoDomicilio;
+    const detallePagos = window.construirDetallePagosVentaDesdeFormulario?.(formaPago, totalCobrado) || [];
+    if (formaPago === 'mixto') {
+      const suma = detallePagos.reduce((a, i) => a + Number(i.valor || 0), 0);
+      if (!detallePagos.length || Math.abs(suma - totalCobrado) >= 0.01) {
+        alert('Configura el pago mixto para que coincida exactamente con el total a cobrar.');
+        window.abrirModalPagoMixto?.();
+        return;
+      }
+    }
+
+    lpGuardandoVenta = true;
+    lpBloquearBotonesGuardar(true);
+    let popup = null;
+    try {
+      popup = window.open('about:blank', '_blank', 'width=420,height=720');
+      if (popup) {
+        popup.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Preparando comanda</title></head><body style="font-family:sans-serif;padding:16px">Preparando comanda...</body></html>');
+        popup.document.close();
+      }
+
+      const ahora = new Date();
+      const anterior = ventaOriginalEnEdicion ? lpNormalizarVenta(ventaOriginalEnEdicion) : null;
+      const esNueva = !anterior;
+      const fechaBase = anterior?.fechaISO ? new Date(anterior.fechaISO) : ahora;
+      const diaClave = anterior?.diaClave || lpDiaOperativo(fechaBase);
+      const numeracion = esNueva ? await lpSiguienteNumeracion(diaClave) : {
+        comanda: anterior.comanda ?? anterior.recibo,
+        recibo: anterior.recibo ?? anterior.comanda
+      };
+      const localId = anterior?._localId || anterior?._docId || (window.generarIdVentaLocal?.() || `venta_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+      const numeroDomicilio = tipoPedido === 'Domicilio'
+        ? ((anterior?.tipoPedido === 'Domicilio' && Number(anterior?.numeroDomicilio || 0) > 0)
+          ? Number(anterior.numeroDomicilio)
+          : window.obtenerSiguienteNumeroDomicilioDelDia?.(diaClave))
+        : null;
+
+      const venta = lpNormalizarVenta({
+        ...(anterior || {}),
+        _docId: anterior?._docId || null,
+        _localId: localId,
+        cliente,
+        formaPago,
+        tipoPedido,
+        numeroDomicilio,
+        costoDomicilio,
+        subtotalProductos: info.subtotalNeto,
+        subtotalAntesDescuento: info.subtotalBruto,
+        descuentoPorcentaje: info.porcentaje,
+        descuentoValor: info.valor,
+        descuentoNombre: info.valor > 0 ? 'Descuento 20%' : '',
+        observaciones: '',
+        pedido: pedido.map(p => ({ ...p })),
+        detallePagos,
+        totalCobrado,
+        total: info.subtotalNeto,
+        estado: anterior?.estado || (typeof ESTADO_VENTA_ACTIVA !== 'undefined' ? ESTADO_VENTA_ACTIVA : 'activa'),
+        fechaCancelacion: anterior?.fechaCancelacion || null,
+        canceladaPor: anterior?.canceladaPor || '',
+        fecha: anterior?.fecha || window.formatearFechaHoraColombia?.(ahora) || ahora.toLocaleString(),
+        fechaISO: anterior?.fechaISO || ahora.toISOString(),
+        diaClave,
+        comanda: numeracion.comanda,
+        recibo: numeracion.recibo,
+        usuario: usuarioActual || '',
+        rolUsuario: rolActual || '',
+        pedidoCatalogoId: pedidoCatalogoActualId || anterior?.pedidoCatalogoId || null
+      });
+
+      const resultado = await lpPersistirVenta(venta, anterior);
+      window.guardarReferenciaUltimaVenta?.(resultado.venta);
+      window.limpiarContextoEdicionVenta?.();
+
+      try { window.imprimirComandaVenta?.(resultado.venta, popup); } catch (e) {
+        console.warn('No se pudo imprimir la comanda automáticamente.', e);
+        try { popup?.close(); } catch (_) {}
+      }
+
+      if (resultado.sincronizada && resultado.venta.pedidoCatalogoId) {
+        await window.marcarPedidoCatalogoEstado?.(resultado.venta.pedidoCatalogoId, 'procesado', false);
+      }
+
+      window.limpiarPedido?.();
+      window.mostrarVentas?.();
+      window.refrescarVistasAnaliticasSiEstanAbiertas?.();
+      document.getElementById('resumenProductos')?.classList.add('hidden');
+      if (!resultado.sincronizada) {
+        window.actualizarIndicadorFirebase?.('desconectado', 'Venta guardada localmente. Se sincronizará automáticamente al recuperar conexión.');
+      }
+    } catch (error) {
+      console.error('Error crítico al guardar la venta:', error);
+      try { popup?.close(); } catch (_) {}
+      alert('No se pudo guardar la venta. No se modificó el pedido; revisa el almacenamiento del navegador.');
+    } finally {
+      lpGuardandoVenta = false;
+      lpBloquearBotonesGuardar(false);
+    }
+  };
+  try { guardarVenta = window.guardarVenta; } catch (_) {}
+
+  window.marcarVentaComoCancelada = async function (index) {
+    if (!window.verificarAcceso?.(['admin'])) return;
+    const ventas = window.obtenerVentasStorage?.() || [];
+    const anterior = ventas[index];
+    if (!anterior) return alert('Venta no encontrada.');
+    if (window.esVentaCancelada?.(anterior)) return alert('Esta venta ya está cancelada.');
+    if (!confirm(`¿Cancelar la venta #${anterior.comanda ?? anterior.recibo ?? index + 1}?`)) return;
+    const cancelada = lpNormalizarVenta({
+      ...anterior,
+      estado: (typeof ESTADO_VENTA_CANCELADA !== 'undefined' ? ESTADO_VENTA_CANCELADA : 'cancelada'),
+      fechaCancelacion: new Date().toISOString(),
+      canceladaPor: usuarioActual || ''
+    });
+    const resultado = await lpPersistirVenta(cancelada, anterior);
+    window.guardarReferenciaUltimaVenta?.(resultado.venta);
+    alert(resultado.sincronizada ? 'Venta cancelada correctamente.' : 'Venta cancelada localmente y pendiente de sincronización.');
+    window.mostrarVentas?.();
+    window.renderControlCajaDiaActual?.();
+    window.refrescarVistasAnaliticasSiEstanAbiertas?.();
+  };
+  try { marcarVentaComoCancelada = window.marcarVentaComoCancelada; } catch (_) {}
+
+  async function lpBorrarVentaTransaccional(venta) {
+    if (!lpEsOnlineFirestore()) throw new Error('Se requiere conexión para eliminar una venta remota.');
+    const id = lpDocIdVenta(venta, venta._docId || venta._localId);
+    const ref = firestoreDb.collection('ventas').doc(id);
+    const mapaInventario = await lpMapaInventarioFirestore();
+    await firestoreDb.runTransaction(async function (tx) {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const anterior = lpNormalizarVenta({ _docId: snap.id, ...snap.data() });
+      const pedidoAnterior = window.esVentaCancelada?.(anterior) ? [] : anterior.pedido;
+      const ajustes = window.calcularAjustesInventarioBebidas?.(pedidoAnterior || [], []) || {};
+      const inventarioLecturas = [];
+      for (const [clave, ajuste] of Object.entries(ajustes)) {
+        const invRef = mapaInventario.get(clave);
+        if (!invRef) continue;
+        inventarioLecturas.push({ ajuste, invRef, snap: await tx.get(invRef) });
+      }
+      for (const lectura of inventarioLecturas) {
+        tx.update(lectura.invRef, {
+          cantidad: Math.max(0, Number(lectura.snap.data()?.cantidad || 0) + Number(lectura.ajuste.cantidad || 0)),
+          fecha: window.obtenerFechaLocalISO?.(new Date()) || new Date().toISOString().slice(0, 10)
+        });
+      }
+      tx.delete(ref);
+    });
+  }
+
+  window.eliminarVentasPorClaves = async function (claves = []) {
+    if (!window.verificarAcceso?.(['admin'])) return;
+    const set = new Set((Array.isArray(claves) ? claves : []).filter(Boolean));
+    if (!set.size) return alert('Selecciona al menos un pedido para eliminar.');
+    const ventas = window.obtenerVentasStorage?.() || [];
+    const registros = ventas.map((venta, index) => ({ venta, index, clave: window.obtenerClaveSeleccionVenta?.(venta, index) || venta._localId || venta._docId })).filter(x => set.has(x.clave));
+    if (!registros.length) return alert('No se encontraron los pedidos seleccionados.');
+    if (!confirm(`¿Eliminar definitivamente ${registros.length} venta${registros.length === 1 ? '' : 's'}?`)) return;
+    for (const registro of registros) {
+      const venta = registro.venta;
+      if (venta._docId) await lpBorrarVentaTransaccional(venta);
+      lpAplicarInventarioLocalUnaVez(null, venta);
+      window.eliminarVentaDeCacheLocal?.(venta);
+      window.quitarVentaPendienteSync?.(venta._localId || venta._docId || '');
+      ventasSeleccionadas?.delete?.(registro.clave);
+    }
+    window.actualizarReferenciaUltimaVentaTrasEliminar?.();
+    window.mostrarVentas?.();
+    window.renderControlCajaDiaActual?.();
+    window.refrescarVistasAnaliticasSiEstanAbiertas?.();
+    alert('Venta(s) eliminada(s) correctamente.');
+  };
+  try { eliminarVentasPorClaves = window.eliminarVentasPorClaves; } catch (_) {}
+
+  function lpPedidosValidos(orden = {}) {
+    const origen = Array.isArray(orden.pedidoPOS) && orden.pedidoPOS.length ? orden.pedidoPOS : (orden.pedido || []);
+    const catalogo = new Map();
+    Object.values(catalogoProductos || {}).flat().forEach(p => {
+      const key = lpTextoPlano(p?.nombre || '', 120).toLowerCase();
+      if (key) catalogo.set(key, Math.max(0, Number(p?.precio || 0)));
+    });
+    const salida = [];
+    for (const item of origen.slice(0, 100)) {
+      const nombre = lpTextoPlano(item?.nombre || item?.name || item?.producto || '', 120);
+      if (!nombre) continue;
+      const precioRecibido = Number(item?.precio ?? item?.unitPrice ?? item?.valor ?? 0);
+      const precio = catalogo.has(nombre.toLowerCase()) ? catalogo.get(nombre.toLowerCase()) : precioRecibido;
+      const cantidad = Math.min(100, Math.max(1, Math.floor(Number(item?.cantidad ?? item?.qty ?? 1) || 1)));
+      if (!Number.isFinite(precio) || precio < 0 || precio > 5000000) continue;
+      for (let i = 0; i < cantidad && salida.length < 300; i++) salida.push({ nombre, precio });
+      if (salida.length >= 300) break;
+    }
+    return salida;
+  }
+  window.obtenerPedidoPOSDesdeCatalogo = lpPedidosValidos;
+  try { obtenerPedidoPOSDesdeCatalogo = lpPedidosValidos; } catch (_) {}
+
+  window.marcarPedidoCatalogoEstado = async function (docId = '', estado = 'recibido', notificar = true) {
+    if (!docId || !lpEsOnlineFirestore()) return false;
+    const permitido = new Set(['nuevo', 'reservado', 'recibido', 'procesado', 'cancelado']);
+    if (!permitido.has(String(estado).toLowerCase())) return false;
+    try {
+      await firestoreDb.collection((typeof PEDIDOS_CATALOGO_COLLECTION !== 'undefined' ? PEDIDOS_CATALOGO_COLLECTION : 'pedidosCatalogo')).doc(docId).set({
+        estado,
+        actualizadoEn: window.firebase?.firestore?.FieldValue?.serverTimestamp ? window.firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString(),
+        actualizadoPor: usuarioActual || '',
+        actualizadoPorUid: usuarioActualUid || ''
+      }, { merge: true });
+      if (['procesado', 'cancelado'].includes(estado)) {
+        pedidosCatalogoCache = (pedidosCatalogoCache || []).filter(x => x._docId !== docId);
+      }
+      window.renderPedidosCatalogo?.();
+      if (notificar) alert('Pedido actualizado.');
+      return true;
+    } catch (error) {
+      console.error('No se pudo actualizar el pedido:', error);
+      if (notificar) alert('No se pudo actualizar el pedido.');
+      return false;
+    }
+  };
+  try { marcarPedidoCatalogoEstado = window.marcarPedidoCatalogoEstado; } catch (_) {}
+
+  window.cargarPedidoCatalogoEnPOS = async function (docId = '') {
+    if (!window.verificarAcceso?.(['admin', 'cajero'])) return;
+    if (!lpEsOnlineFirestore()) return alert('Se requiere conexión para reservar un pedido del catálogo.');
+    const ref = firestoreDb.collection((typeof PEDIDOS_CATALOGO_COLLECTION !== 'undefined' ? PEDIDOS_CATALOGO_COLLECTION : 'pedidosCatalogo')).doc(docId);
+    try {
+      let ordenReservada = null;
+      await firestoreDb.runTransaction(async function (tx) {
+        const snap = await tx.get(ref);
+        if (!snap.exists) throw new Error('Pedido no encontrado.');
+        const data = snap.data() || {};
+        const estado = String(data.estado || 'nuevo').toLowerCase();
+        if (['procesado', 'cancelado'].includes(estado)) throw new Error('Este pedido ya fue cerrado.');
+        const reservaFecha = data.reservadoEn?.toDate ? data.reservadoEn.toDate() : new Date(data.reservadoEn || 0);
+        const reservaActiva = !Number.isNaN(reservaFecha.getTime()) && Date.now() - reservaFecha.getTime() < LP_RESERVA_PEDIDO_MS;
+        const otro = data.reservadoPorUid && data.reservadoPorUid !== (usuarioActualUid || '') && reservaActiva;
+        if (otro) throw new Error(`Este pedido está siendo atendido por ${data.reservadoPor || 'otro usuario'}.`);
+        tx.set(ref, {
+          estado: 'reservado',
+          reservadoPor: usuarioActual || '',
+          reservadoPorUid: usuarioActualUid || '',
+          reservadoEn: window.firebase?.firestore?.FieldValue?.serverTimestamp ? window.firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString()
+        }, { merge: true });
+        ordenReservada = { _docId: snap.id, ...data };
+      });
+
+      const items = lpPedidosValidos(ordenReservada || {});
+      if (!items.length) throw new Error('El pedido no contiene productos válidos.');
+      pedido = items;
+      window.resetDescuento20?.();
+      total = window.obtenerSubtotalPedidoActual?.() || items.reduce((a, p) => a + p.precio, 0);
+      pedidoCatalogoActualId = docId;
+      const tipo = window.normalizarTipoAtencionCatalogo?.(ordenReservada) || { id: 'local' };
+      const cliente = lpTextoPlano(ordenReservada.cliente || ordenReservada.nombreCliente || 'Cliente catálogo', 120);
+      const mesa = lpTextoPlano(ordenReservada.mesa || ordenReservada.numeroMesa || '', 30);
+      const clienteInput = document.getElementById('cliente');
+      if (clienteInput) clienteInput.value = tipo.id === 'domicilio' ? `${cliente} - Domicilio` : (mesa ? `Mesa ${mesa} - ${cliente}` : cliente);
+      const tipoInput = document.getElementById('tipoPedido');
+      if (tipoInput) tipoInput.value = tipo.id === 'domicilio' ? 'Domicilio' : 'Aquí';
+      const costo = document.getElementById('costoDomicilio');
+      if (costo) costo.value = tipo.id === 'domicilio' ? String(Math.max(0, Number(ordenReservada.costoDomicilio || 0))) : '';
+      const forma = document.getElementById('formaPago');
+      if (forma && !forma.value) forma.value = 'QR';
+      window.actualizarVistaPedido?.();
+      window.actualizarCampoCostoDomicilio?.();
+      window.irAPasoVenta?.(2);
+      window.scrollToPedido?.();
+    } catch (error) {
+      console.error('No se pudo reservar el pedido:', error);
+      alert(error.message || 'No se pudo reservar el pedido.');
+    }
+  };
+  try { cargarPedidoCatalogoEnPOS = window.cargarPedidoCatalogoEnPOS; } catch (_) {}
+
+  function lpLeerCajaPendiente() {
+    const data = lpLeerJSON(LP_CAJA_PENDIENTE_KEY, {});
+    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+  }
+
+  async function lpSyncCajaPendiente() {
+    if (lpSincronizandoCaja || !lpEsOnlineFirestore()) return;
+    const pendientes = lpLeerCajaPendiente();
+    const dias = Object.keys(pendientes);
+    if (!dias.length) return;
+    lpSincronizandoCaja = true;
+    try {
+      for (const dia of dias) {
+        try {
+          await firestoreDb.collection('controlCaja').doc(dia).set(pendientes[dia], { merge: true });
+          delete pendientes[dia];
+        } catch (error) {
+          console.error('No se pudo sincronizar caja:', error);
+          break;
+        }
+      }
+      localStorage.setItem(LP_CAJA_PENDIENTE_KEY, JSON.stringify(pendientes));
+    } finally {
+      lpSincronizandoCaja = false;
+    }
+  }
+
+  window.guardarControlCajaDia = async function (diaClave, payload = {}) {
+    const control = window.normalizarControlCaja ? window.normalizarControlCaja({ ...payload, diaClave }, diaClave) : { ...payload, diaClave };
+    window.guardarControlCajaEnCache?.(control);
+    const pendientes = lpLeerCajaPendiente();
+    pendientes[diaClave] = control;
+    localStorage.setItem(LP_CAJA_PENDIENTE_KEY, JSON.stringify(pendientes));
+    if (lpEsOnlineFirestore()) await lpSyncCajaPendiente();
+    return control;
+  };
+  try { guardarControlCajaDia = window.guardarControlCajaDia; } catch (_) {}
+
+  window.debeAbrirCajaPorImpresion = function (titulo = '') {
+    return /recibo\s*cliente/i.test(String(titulo || ''));
+  };
+  try { debeAbrirCajaPorImpresion = window.debeAbrirCajaPorImpresion; } catch (_) {}
+
+  if (typeof window.escucharInventarioFirestore === 'function') {
+    const originalInventario = window.escucharInventarioFirestore;
+    window.escucharInventarioFirestore = function () {
+      const rol = String(rolActual || localStorage.getItem('rolActual') || '').toLowerCase();
+      if (!['admin', 'administrador', 'cajero'].includes(rol)) {
+        if (typeof inventarioUnsubscribe === 'function') inventarioUnsubscribe();
+        inventarioUnsubscribe = null;
+        return;
+      }
+      return originalInventario.apply(this, arguments);
+    };
+    try { escucharInventarioFirestore = window.escucharInventarioFirestore; } catch (_) {}
+  }
+
+  if (typeof window.cerrarSesionRol === 'function') {
+    const cerrarOriginal = window.cerrarSesionRol;
+    window.cerrarSesionRol = async function () {
+      if (typeof inventarioUnsubscribe === 'function') {
+        try { inventarioUnsubscribe(); } catch (_) {}
+        inventarioUnsubscribe = null;
+      }
+      if (temporizadorSyncVentasPendientes) clearTimeout(temporizadorSyncVentasPendientes);
+      return cerrarOriginal.apply(this, arguments);
+    };
+    try { cerrarSesionRol = window.cerrarSesionRol; } catch (_) {}
+  }
+
+  window.addEventListener('online', function () {
+    firestoreDisponible = Boolean(firestoreDb && firebaseAuth?.currentUser);
+    window.sincronizarVentasPendientesEnSegundoPlano?.();
+    lpSyncCajaPendiente();
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () {
+      window.sincronizarVentasPendientesEnSegundoPlano?.();
+      lpSyncCajaPendiente();
+    }, 1200);
+  });
+
+  window.LP_ESTABILIZACION_INTEGRAL_ACTIVA = true;
+  console.info('La Parepa: capa de estabilización integral activa.');
 })();
 </script>
 
