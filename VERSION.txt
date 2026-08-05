@@ -1,0 +1,4 @@
+La Parepa C2.6-TABLES-QUERY-CACHE
+Proyecto Firebase: laparepa
+Paginación remota: 10 documentos exactos por consulta
+Colección oficial de perfiles: usuariosSistema/{uid}
