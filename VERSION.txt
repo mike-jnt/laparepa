@@ -1,0 +1,3 @@
+La Parepa C2.11-HIDDEN-RECOVERY-TOOLS
+Fecha: 2026-08-08
+Cambio: Verificar y Descargar JSON de este navegador quedan ocultos por defecto y se alternan con Ctrl+Shift+R solo para administradores.
