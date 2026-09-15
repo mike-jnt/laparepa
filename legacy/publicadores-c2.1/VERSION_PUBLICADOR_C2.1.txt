@@ -1,0 +1,1 @@
+C2.1 - Correccion del publicador de Firebase para Windows. Sin cambios funcionales en la aplicacion.

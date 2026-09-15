@@ -1,0 +1,19 @@
+LA PAREPA C2.1 - CORRECCION DEL PUBLICADOR EN WINDOWS
+
+Problema encontrado:
+El archivo C2.0 ejecutaba "firebase use laparepa" y "firebase deploy" directamente desde un archivo .bat.
+Cuando Firebase CLI fue instalado mediante npm, el comando suele resolverse como firebase.cmd.
+Windows necesita CALL para regresar al archivo .bat que lo invoco.
+
+Efecto observado:
+El proceso terminaba despues de mostrar "Now using project laparepa" y no alcanzaba la linea de despliegue.
+
+Correccion aplicada:
+1. Se elimino "firebase use laparepa" porque era redundante.
+2. El proyecto se fija obligatoriamente con --project laparepa.
+3. Todas las llamadas a Firebase usan CALL.
+4. Se conserva el codigo de salida real del despliegue.
+5. Se agregaron mensajes de diagnostico y un archivo DIAGNOSTICO_FIREBASE_C2.1.bat.
+
+Archivo recomendado:
+PUBLICAR_COMPLETO_C2.1.bat
